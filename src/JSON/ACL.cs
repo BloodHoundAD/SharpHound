@@ -1,5 +1,6 @@
 ﻿
 using BHECollector;
+using SharpHoundCommonLib.Enums;
 
 namespace SharpHound.JSON
 {
@@ -10,7 +11,7 @@ namespace SharpHound.JSON
     {
 
         public string PrincipalSID { get; set; }
-        public LdapTypeEnum PrincipalType { get; set; }
+        public Label PrincipalType { get; set; }
         public string RightName { get; set; }
         public string AceType { get; set; }
         public bool IsInherited { get; set; }

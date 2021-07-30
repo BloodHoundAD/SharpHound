@@ -11,57 +11,29 @@
 //------------------------------------------------------//
 // creational_pattern : Inherit from System.CommandLine //
 // structual_pattern  : Chain Of Responsibility          //
-// behavioral_pattern : inherit from Sharphound3        //
+// behavioral_pattern : inherit from SharpHound3        //
 // ---------------------------------------------------- //
 
+using SharpHound.Core;
+using SharpHound.Enums;
+using SharpHound.Tasks;
 using SharpHoundCommonLib;
+using SharpHoundCommonLib.Enums;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.DirectoryServices;
+using System.IO;
 using System.Security.Principal;
-using System.Timers;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using Timer = System.Timers.Timer;
 
-namespace CliClient
+namespace SharpHound
 {
-    #region Structural Design Elements
 
-    /// <summary>
-    /// A facade for writing to the console.
-    /// </summary>
-    public interface ConsolePrinter
-    {
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="message"></param>
-        void WriteLine(string message);
-    }
-
-    /// <summary>
-    /// Chain of custody pattern execution steps
-    /// </summary>
-    /// <typeparam name="T">A context to be populated.</typeparam>
-    public interface Links<T>
-    {
-        Context Initalize(string ldapUsername, string ldapPassword, bool loop, TimeSpan? loopDuration, TimeSpan? loopInterval, T context);
-        Context SetSessionUserName(string CurrentUserName, T context);
-        Context TestConnection(string Domain, T context); //Initial LDAP connection test. Search for the well known administrator SID to make sure we can connect successfully.
-        Context StartLoopTimer(T context);
-        Context CreateCache(T context);
-        Context StartTheComputerErrorTask(T context);
-        Context BuildPipeline(string Domain, T context);
-        Context AwaitPipelineCompeletionTask(T context);
-        Context AwaitOutputTasks(T context);
-        Context MarkRunComplete(T context);
-        Context CancellationCheck(T context);
-        Context StartLoop(T context);
-        Context DisposeTimer(T context);
-        Context SaveCacheFile(T context);
-        Context Finish(T context);
-    }
-
-    #endregion
-
-    #region Base Implementations 
+    #region Reference Implementations 
 
     public class ConsoleWrapper : ConsolePrinter
     {
@@ -71,43 +43,140 @@ namespace CliClient
         }
     }
 
-    public interface Context
-    {
-        bool IsFaulted { get; set; }
-        bool InitialCompleted { get; set; }
-        bool NeedsCancellation { get; set; }
-        Timer Timer { get; set; }
-        Cache Cache { get; set; }
-        bool Loop { get; set; }
-        TimeSpan? LoopDuration { get; set; }
-        TimeSpan? LoopInterval { get; set; }
-        DateTime LoopEnd { get; set; }
-        string CurrentUserName { get; set; }
-        ConsolePrinter Printer { get; set; }
-    }
 
     /// <summary>
     /// Console Context holds the various properties to be populated/validated by the chain of responsibility.
     /// </summary>
     public class BaseContext : IDisposable, Context
     {
+        private static readonly ConcurrentDictionary<string, DirectorySearcher> DirectorySearchMap = new ConcurrentDictionary<string, DirectorySearcher>();
+        private static readonly ConcurrentDictionary<string, bool> PingCache = new ConcurrentDictionary<string, bool>();
+        private static readonly Regex SPNRegex = new Regex(@".*\/.*", RegexOptions.Compiled);
+        private static readonly string ProcStartTime = $"{DateTime.Now:yyyyMMddHHmmss}";
+        private static string _currentLoopTime = $"{DateTime.Now:yyyyMMddHHmmss}";
+        private static readonly Random RandomGen = new Random();
+
+
+        BaseContext(LDAPQueryOptions options)
+        {
+            LDAPUtils = new LDAPUtils();
+            CancellationTokenSource = new CancellationTokenSource();
+            Options = options;
+        }
+
+        public CollectionMethodResolved ResolvedCollectionMethods { get; set; }
+
+        public LDAPQueryOptions Options { get; set; }
+        public IEnumerable<string> CollectionMethods { get; set; }
+        public string SearchBase { get; set; }
+        public string DomainName { get; set; }
+        public string CacheFileName { get; set; }
+
+        public string ComputerFile { get; set; }
+        public string ZipFilename { get; set; }
+
         private bool disposedValue;
         public Cache Cache { get; set; }
         public bool IsFaulted { get; set; }
         public string CurrentUserName { get; set; }
         public ConsolePrinter Printer { get; set; }
-        public bool InitialCompleted { get; set; }
-        public bool NeedsCancellation { get; set; }
-        public Timer Timer { get; set; }
+        public System.Timers.Timer Timer { get; set; }
         public DateTime LoopEnd { get; set; }
-        public bool Loop { get; set; }
         public TimeSpan? LoopDuration { get; set; }
         public TimeSpan? LoopInterval { get; set; }
 
-        public BaseContext(ConsolePrinter printer)
+        public int StatusInterval { get; set; }
+        public string RealDNSName { get; set; }
+        public string OutputPrefix { get; set; }
+        public string OutputDirectory { get; set; }
+
+        public int Throttle { get; set; }
+        public int Jitter { get; set; }
+
+        public CancellationTokenSource CancellationTokenSource { get; set; }
+
+
+        public ILDAPUtils LDAPUtils { get; set; }
+
+        public Task PipelineCompletionTask { get; set; }
+        public Flags Flags { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
+        public BaseContext(ConsolePrinter printer, LDAPQueryOptions options, Flags flags)
         {
             Printer = printer;
+            Options = options;
+            Flags = Flags;
             Cache.CreateNewCache();
+        }
+
+        public string ResolveFileName(Context context, string filename, string extension, bool addTimestamp)
+        {
+            var finalFilename = filename;
+            if (!filename.EndsWith(extension))
+                finalFilename = $"{filename}.{extension}";
+
+            if ((extension == "json" || extension == "zip") && context.Flags.RandomizeFilenames)
+            {
+                finalFilename = $"{Path.GetRandomFileName()}";
+            }
+
+            if (addTimestamp)
+            {
+                finalFilename = $"{_currentLoopTime}_{finalFilename}";
+            }
+
+            if (context.OutputPrefix != null)
+            {
+                finalFilename = $"{context.OutputPrefix}_{finalFilename}";
+            }
+
+            var finalPath = Path.Combine(context.OutputDirectory, finalFilename);
+
+            return finalPath;
+        }
+
+        public async Task DoDelay(Context context)
+        {
+            if (context.Throttle == 0)
+                return;
+
+            if (context.Jitter == 0)
+            {
+                await Task.Delay(context.Throttle);
+                return;
+            }
+
+            var percent = (int)Math.Floor((double)(context.Jitter * (context.Throttle / 100)));
+            var delay = context.Throttle + RandomGen.Next(-percent, percent);
+            await Task.Delay(delay);
+        }
+
+        public void StartNewRun()
+        {
+            PingCache.Clear();
+            _currentLoopTime = $"{DateTime.Now:yyyyMMddHHmmss}";
+        }
+
+        /// <summary>
+        /// Removes non-computer collection methods from specified ones for looping
+        /// </summary>
+        /// <returns></returns>
+        public ResolvedCollectionMethod GetLoopCollectionMethods()
+        {
+            var original = ResolvedCollectionMethods;
+            const CollectionMethodResolved computerCollectionMethod = CollectionMethodResolved.LocalGroups | CollectionMethodResolved.LoggedOn |
+                                                  CollectionMethodResolved.Sessions;
+            return original & computerCollectionMethod;
+        }
+
+        internal bool IsComputerCollectionSet()
+        {
+            return (ResolvedCollectionMethods & CollectionMethodResolved.Sessions) != 0 ||
+                   (ResolvedCollectionMethods & CollectionMethodResolved.LocalAdmin) != 0 ||
+                   (ResolvedCollectionMethods & CollectionMethodResolved.RDP) != 0 ||
+                   (ResolvedCollectionMethods & CollectionMethodResolved.DCOM) != 0 ||
+                   (ResolvedCollectionMethods & CollectionMethodResolved.PSRemote) != 0 ||
+                   (ResolvedCollectionMethods & CollectionMethodResolved.LoggedOn) != 0;
         }
 
         /// <summary>
@@ -159,23 +228,23 @@ namespace CliClient
         public Context AwaitPipelineCompeletionTask(Context context)
         {
             /// 8/9. Wait for output to complete
-            // await context.pipelineCompletionTask;
+            context.PipelineCompletionTask.Wait();
             return context;
         }
 
-        public Context BuildPipeline(string Domain, Context context)
+        public Context BuildPipeline(Context context)
         {
             ///7. Build our pipeline, and get the initial block to wait for completion.
-            // context.pipelineCompletionTask = PipelineBuilder.GetBasePipelineForDomain(Domain);
+            context.PipelineCompletionTask = PipelineBuilder.GetBasePipelineForDomain(context);
             return context;
         }
 
         public Context CancellationCheck(Context context)
         {
-            //12. 
-            if (context.NeedsCancellation)
+            // 12. 
+            if (context.CancellationTokenSource.IsCancellationRequested)
             {
-                // Helpers.InvokeCancellation(); // TODO: udpate call
+                context.CancellationTokenSource.Cancel();
             }
             return context;
         }
@@ -183,14 +252,14 @@ namespace CliClient
         public Context CreateCache(Context context)
         {
             //5. Create our Cache
-            // context.Cache.CreateInstance(); //TODO: Update call
+            Cache.CreateNewCache();
             return context;
         }
 
         public Context DisposeTimer(Context context)
         {
             //14. Dispose the context.
-            // context.Timer?.Dispose();
+            context.Timer?.Dispose();
             return context;
         }
 
@@ -198,9 +267,9 @@ namespace CliClient
         {
             ////16. And we're done!
             var currTime = DateTime.Now;
-            Console.WriteLine();
-            Console.WriteLine($"SharpHound Enumeration Completed at {currTime.ToShortTimeString()} on {currTime.ToShortDateString()}! Happy Graphing!");
-            Console.WriteLine();
+            context.Printer.WriteLine(string.Empty);
+            context.Printer.WriteLine($"SharpHound Enumeration Completed at {currTime.ToShortTimeString()} on {currTime.ToShortDateString()}! Happy Graphing!");
+            context.Printer.WriteLine(string.Empty);
             return context;
         }
 
@@ -209,7 +278,7 @@ namespace CliClient
         /// </summary>
         /// <param name="printer"></param>
         /// <param name="context"></param>
-        public Context Initalize(string ldapUsername, string ldapPassword, bool loop, TimeSpan? loopDuration, TimeSpan? loopInterval, Context context)
+        public Context Initalize(Context context,  string ldapUsername, string ldapPassword)
         {
             //We've successfully parsed arguments, lets do some options post-processing.
             var currentTime = DateTime.Now;
@@ -224,44 +293,44 @@ namespace CliClient
             if ((ldapPassword != null && ldapUsername == null) ||
                 (ldapUsername != null && ldapPassword == null))
             {
-                Console.WriteLine("You must specify both LdapUsername and LdapPassword if using these options!");
+                context.Printer.WriteLine("You must specify both LdapUsername and LdapPassword if using these options!");
                 return context;
             }
 
             //Check some loop options
-            if (loop)
+            if (context.Flags.Loop)
             {
                 //If loop is set, ensure we actually set options properly
-                if (loopDuration == null || loopDuration == TimeSpan.Zero)
+                if (context.LoopDuration == null || context.LoopDuration == TimeSpan.Zero)
                 {
-                    Console.WriteLine("Loop specified without a duration. Defaulting to 2 hours!");
-                    loopDuration = TimeSpan.FromHours(2);
+                    context.Printer.WriteLine("Loop specified without a duration. Defaulting to 2 hours!");
+                    context.LoopDuration = TimeSpan.FromHours(2);
                 }
 
-                if (loopInterval == null || loopInterval == TimeSpan.Zero)
+                if (context.LoopInterval == null || context.LoopInterval == TimeSpan.Zero)
                 {
-                    loopInterval = TimeSpan.FromSeconds(30);
+                    context.LoopInterval = TimeSpan.FromSeconds(30);
                 }
             }
 
             return context;
         }
 
-        public Context  MarkRunComplete(Context context)
+        public Context MarkRunComplete(Context context)
         {
-            ////11. Mark our initial run as complete, signalling that we're now in the looping phase
-            context.InitialCompleted = true;
+            // 11. Mark our initial run as complete, signalling that we're now in the looping phase
+            context.Flags.InitialCompleted = true;
             return context;
         }
 
-        public Context  SaveCacheFile(Context context)
+        public Context SaveCacheFile(Context context)
         {
-            ////15. Program exit started. Save the cache file
-            //Cache.Instance.SaveCache(); // TODO: update calls
+            // 15. Program exit started. Save the cache file
+            Cache.SaveCache(context.CacheFileName);
             return context;
         }
 
-        public Context  SetSessionUserName(string OverrideUserName, Context context)
+        public Context SetSessionUserName(string OverrideUserName, Context context)
         {
             //2. SetSessionUserName()
             // Set the current user name for session collection.
@@ -273,72 +342,74 @@ namespace CliClient
                 {
                     context.CurrentUserName = WindowsIdentity.GetCurrent().Name.Split('\\')[1];
                 }
+
             return context;
         }
 
-        public Context  StartLoop(Context context)
+        public Context StartLoop(Context context)
         {
-            ///13. Start looping if specified
-            // if (context.Loop)
-            // {
-            //     if (Helpers.GetCancellationToken().IsCancellationRequested)
-            //     {
-            //         Console.WriteLine("Skipping looping because loop duration has already passed");
-            //     }
-            //     else
-            //     {
-            //         Console.WriteLine();
-            //         Console.WriteLine("Waiting 30 seconds before starting loops");
-            //         try
-            //         {
-            //             await Task.Delay(TimeSpan.FromSeconds(30), Helpers.GetCancellationToken());
-            //         }
-            //         catch (TaskCanceledException)
-            //         {
-            //             Console.WriteLine("Skipped wait because loop duration has completed!");
-            //         }
+                // 13.Start looping if specified
+             if (context.Flags.Loop)
+                {
+                    if (context.CancellationTokenSource.IsCancellationRequested)
+                    {
+                        context.Printer.WriteLine("Skipping looping because loop duration has already passed");
+                    }
+                    else
+                    {
+                        context.Printer.WriteLine(string.Empty);
+                        context.Printer.WriteLine("Waiting 30 seconds before starting loops");
+                        try
+                        {
+                            Task.Delay(TimeSpan.FromSeconds(30), context.CancellationTokenSource.Token).Wait();
+                        }
+                        catch (TaskCanceledException)
+                        {
+                            context.Printer.WriteLine("Skipped wait because loop duration has completed!");
+                        }
 
-            //         if (!Helpers.GetCancellationToken().IsCancellationRequested)
-            //         {
-            //             Console.WriteLine();
-            //             Console.WriteLine($"Loop Enumeration Methods: {options.GetLoopCollectionMethods()}");
-            //             Console.WriteLine($"Looping scheduled to stop at {loopEnd.ToLongTimeString()} on {loopEnd.ToShortDateString()}");
-            //             Console.WriteLine();
-            //         }
+                    if (!context.CancellationTokenSource.IsCancellationRequested)
+                        {
+                            context.Printer.WriteLine(string.Empty);
+                            context.Printer.WriteLine($"Loop Enumeration Methods: {context.CollectionMethods}");
+                            context.Printer.WriteLine($"Looping scheduled to stop at {context.LoopEnd.ToLongTimeString()} on {context.LoopEnd.ToShortDateString()}");
+                            context.Printer.WriteLine(string.Empty);
+                        }
 
-            //         var count = 0;
-            //         while (!Helpers.GetCancellationToken().IsCancellationRequested)
-            //         {
-            //             count++;
-            //             var currentTime = DateTime.Now;
-            //             Console.WriteLine($"Starting loop #{count} at {currentTime.ToShortTimeString()} on {currentTime.ToShortDateString()}");
-            //             Helpers.StartNewRun();
-            //             pipelineCompletionTask = PipelineBuilder.GetLoopPipelineForDomain(Options.Instance.Domain);
-            //             await pipelineCompletionTask;
-            //             await OutputTasks.CompleteOutput();
-            //             if (!Helpers.GetCancellationToken().IsCancellationRequested)
-            //             {
-            //                 Console.WriteLine();
-            //                 Console.WriteLine($"Waiting {options.LoopInterval.TotalSeconds} seconds for next loop");
-            //                 Console.WriteLine();
-            //                 try
-            //                 {
-            //                     await Task.Delay(options.LoopInterval, Helpers.GetCancellationToken());
-            //                 }
-            //                 catch (TaskCanceledException)
-            //                 {
-            //                     Console.WriteLine("Skipping wait as loop duration has expired");
-            //                 }
-            //             }
-            //         }
+                        var count = 0;
+                        while (!context.CancellationTokenSource.IsCancellationRequested)
+                        {
+                            count++;
+                            var currentTime = DateTime.Now;
+                            context.Printer.WriteLine($"Starting loop #{count} at {currentTime.ToShortTimeString()} on {currentTime.ToShortDateString()}");
+                            context.StartNewRun();
+                            context.PipelineCompletionTask = PipelineBuilder.GetLoopPipelineForDomain(context);
+                            context.PipelineCompletionTask.Wait();
+                            OutputTasks.CompleteOutput(context).Wait();
 
-            //         if (count > 0)
-            //             Console.WriteLine($"Looping finished! Looped a total of {count} times");
+                            if (!context.CancellationTokenSource.Token.IsCancellationRequested)
+                            {
+                                context.Printer.WriteLine(string.Empty);
+                                context.Printer.WriteLine($"Waiting {context.LoopInterval?.TotalSeconds} seconds for next loop");
+                                context.Printer.WriteLine(string.Empty);
+                                try
+                                {
+                                    Task.Delay((TimeSpan)context.LoopInterval, context.CancellationTokenSource.Token).Wait();
+                                }
+                                catch (TaskCanceledException)
+                                {
+                                    context.Printer.WriteLine("Skipping wait as loop duration has expired");
+                                }
+                            }
+                        }
 
-            //         //Special function to grab all the zip files created by looping and collapse them into a single file
-            //         await OutputTasks.CollapseLoopZipFiles();
-            //     }
-            // }
+                        if (count > 0)
+                            context.Printer.WriteLine($"Looping finished! Looped a total of {count} times");
+
+                        //Special function to grab all the zip files created by looping and collapse them into a single file
+                        OutputTasks.CollapseLoopZipFiles(context).Wait();
+                    }
+                }
 
             return context;
         }
@@ -347,19 +418,19 @@ namespace CliClient
         {
             //4. Start Loop Timer
             //If loop is set, set up our timer for the loop now
-            if (context.Loop)
+            if (context.Flags.Loop)
             {
                 // context.LoopEnd = context.LoopEnd.AddMilliseconds(context.LoopDuration.TotalMilliseconds); TOOD: update call
                 context.Timer = new Timer();
                 context.Timer.Elapsed += (sender, eventArgs) =>
                 {
-                    if (context.InitialCompleted)
+                    if (context.Flags.InitialCompleted)
                     {
                         // Helpers.InvokeCancellation();
                     }
                     else
                     {
-                       context.NeedsCancellation = true;
+                       context.Flags.NeedsCancellation = true;
                     }
                 };
                 // context.Timer.Interval = context.LoopDuration.TotalMilliseconds; TOOD: update call
@@ -372,28 +443,27 @@ namespace CliClient
         public Context  StartTheComputerErrorTask(Context context)
         {
             ////6. Start the computer error task (if specified)
-            //OutputTasks.StartComputerStatusTask();
+            OutputTasks.StartComputerStatusTask(context);
             return context;
         }
 
-        public Context TestConnection(string Domain, Context context)
+        public Context TestConnection(Context context)
         {
             //3. TestConnection()
             // Initial LDAP connection test. Search for the well known administrator SID to make sure we can connect successfully.
             // TODO: replace with new LdapUtils call (?)
-            // var searcher = Helpers. GetDirectorySearcher(Domain);
-            object result = null; // await searcher.GetOne("(objectclass=domain)", new[] { "objectsid" }, SearchScope.Subtree);
+            object result = await searcher.GetOne("(objectclass=domain)", new[] { "objectsid" }, SearchScope.Subtree);
 
             //If we get nothing back from LDAP, something is wrong
             if (result == null)
             {
-                Console.WriteLine("LDAP Connection Test Failed. Check if you're in a domain context!");
-                context.IsFaulted = true;
+                context.Printer.WriteLine("LDAP Connection Test Failed. Check if you're in a domain context!");
+                context.Flags.IsFaulted = true;
                 return context;
             }
 
-            context.InitialCompleted = false;
-            context.NeedsCancellation = false;
+            context.Flags.InitialCompleted = false;
+            context.Flags.NeedsCancellation = false;
             context.Timer = null;
             context.LoopEnd = DateTime.Now;
 
@@ -405,7 +475,7 @@ namespace CliClient
 
     class Program
     {
-        /// <param name="CollectionMethod">Collection Methods: Container, Group, LocalGroup, GPOLocalGroup, Session, LoggedOn, ObjectProps, ACL, ComputerOnly, Trusts, Default, RDP, DCOM, DCOnly</param>
+        /// <param name="CollectionMethods">Collection Methods: Container, Group, LocalGroup, GPOLocalGroup, Session, LoggedOn, ObjectProps, ACL, ComputerOnly, Trusts, Default, RDP, DCOM, DCOnly</param>
         /// <param name="Stealth">Use Stealth Targetting/Enumeration Options</param>
         /// <param name="Domain">Specify domain for enumeration></param>
         /// <param name="WindowsOnly">Limit collection to Windows hosts only</param>
@@ -445,7 +515,7 @@ namespace CliClient
         /// <param name="LoopDuration">Duration to perform looping (Default 02:00:00)</param>
         /// <param name="LoopInterval">Interval to sleep between loops</param>
         static void Main(
-            IEnumerable<string> CollectionMethod,
+            IEnumerable<string> CollectionMethods,
             bool Stealth,
             string Domain,
             bool WindowsOnly,
@@ -487,23 +557,65 @@ namespace CliClient
         )
         {
             ConsolePrinter consoleWrapper = new ConsoleWrapper();
-            Context context = new BaseContext(consoleWrapper);
+
+            Flags flags = new Flags()
+            {
+                Loop = Loop,
+                Verbose = Verbose,
+                DumpComputerStatus = DumpComputerStatus,
+                NoRegistryLoggedOn = NoRegistryLoggedOn,
+                ExcludeDomainControllers = ExcludeDomainControllers,
+                SkipPortScan = SkipPortScan,
+                DisableKerberosSigning = DisableKerberosSigning,
+                SecureLDAP = SecureLDAP,
+                InvalidateCache = InvalidateCache,
+                NoZip = NoZip,
+                EncryptZip = EncryptZip,
+                NoSaveCache = NoSaveCache,
+                PrettyJson = PrettyJson,
+                NoOutput = NoOutput,
+                WindowsOnly = WindowsOnly,
+                Stealth = Stealth
+            };
+
+            LDAPQueryOptions options = new LDAPQueryOptions
+            {
+            };
+
+            // Context for this execution
+            Context context = new BaseContext(consoleWrapper, options, flags)
+            {
+                DomainName = Domain,
+                CacheFileName = CacheFilename,
+                ZipFilename = ZipFilename,
+                SearchBase = SearchBase,
+                StatusInterval = StatusInterval,
+                RealDNSName = RealDNSName,
+                ComputerFile = ComputerFile,
+                OutputDirectory = OutputDirectory,
+                Jitter = Jitter,
+                Throttle = Throttle
+            };
+
+            // Create new chain links
             Links<Context> links = new SharpLinks();
-            links.Initalize(ldapUsername: LdapUsername, ldapPassword: LdapPassword, loop: Loop, loopDuration: LoopDuration, loopInterval: LoopInterval, context);
+
+            // Run our chain
+            links.Initalize(context: context, ldapUsername: LdapUsername, ldapPassword: LdapPassword);
             links.SetSessionUserName(OverrideUserName, context);
-            links.TestConnection(Domain, context);
+            links.TestConnection(context);
             links.StartLoopTimer(context);
             links.CreateCache(context);
             links.StartTheComputerErrorTask(context);
-            links.BuildPipeline(Domain, context);
+            links.BuildPipeline(context);
             links.AwaitPipelineCompeletionTask(context);
             links.AwaitOutputTasks(context);
             links.MarkRunComplete(context);
             links.CancellationCheck(context);
             links.StartLoop(context);
             links.DisposeTimer(context);
-            //links.SaveCacheFile(out context);
-            //links.Finish(out context);
+            links.SaveCacheFile(context);
+            links.Finish(context);
         }
     }
 }

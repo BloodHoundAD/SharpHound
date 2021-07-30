@@ -1,5 +1,6 @@
 ﻿using System;
 using BHECollector;
+using SharpHoundCommonLib.Enums;
 
 namespace SharpHound.JSON
 {
@@ -9,7 +10,7 @@ namespace SharpHound.JSON
     internal class GenericMember : IEquatable<GenericMember>
     {
         public string MemberId { get; set; }
-        public LdapTypeEnum MemberType { get; set; }
+        public Label MemberType { get; set; }
 
         public override string ToString()
         {

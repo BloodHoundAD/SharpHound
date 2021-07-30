@@ -19,7 +19,6 @@ namespace SharpHound.JSON
         internal bool SidFilteringEnabled { get; set; }
         [JsonProperty]
         internal string TargetDomainName { get; set; }
-
     }
 
     internal enum TrustDirection
