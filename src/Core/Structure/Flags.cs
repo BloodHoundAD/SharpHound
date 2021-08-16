@@ -29,5 +29,11 @@ namespace SharpHound.Core
         public bool DumpComputerStatus { get; set; }
         public bool CollectAllProperties { get; set; }
         public bool Verbose { get; set; }
+
+        public bool LocalGroupCollection { get; set; }
+
+        public bool SessionCollection { get; set; }
+
+        public bool StructureCollection { get; set; }
     }
 }

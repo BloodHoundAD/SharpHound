@@ -1,7 +1,7 @@
 ﻿// ---------------------------------------------------- //
-//    ______                 __                     __  //
-//   / __/ /  ___ ________  / /  ___  __ _____  ___/ /  //
-//  _\ \/ _ \/ _ `/ __/ _ \/ _ \/ _ \/ // / _ \/ _  /   //
+//    ______                 __ __                  __  //
+//   / __/ /  ___ ________  / // /_   __ _____  ___/ /  //
+//  _\ \/ _ \/ _ `/ __/ _ \/ _  / _ \/ // / _ \/ _  /   //
 // /___/_//_/\_,_/_/ / .__/_//_/\___/\_,_/_//_/\_,_/    //
 //                  /_/                                 //
 //  app type    : console                               //
@@ -10,13 +10,14 @@
 //  license     : open....?                             //
 //------------------------------------------------------//
 // creational_pattern : Inherit from System.CommandLine //
-// structual_pattern  : Chain Of Responsibility          //
+// structual_pattern  : Chain Of Responsibility         //
 // behavioral_pattern : inherit from SharpHound3        //
 // ---------------------------------------------------- //
 
+using Microsoft.Extensions.Logging;
 using SharpHound.Core;
+using SharpHound.Core.Behavior;
 using SharpHound.Enums;
-using SharpHound.Tasks;
 using SharpHoundCommonLib;
 using SharpHoundCommonLib.Enums;
 using System;
@@ -32,18 +33,31 @@ using Timer = System.Timers.Timer;
 
 namespace SharpHound
 {
-
     #region Reference Implementations 
 
-    public class ConsoleWrapper : ConsolePrinter
+    internal class VerboseDiagnosticsTraceWriter : ILogger
     {
-        public void WriteLine(string message)
+        public IDisposable BeginScope<TState>(TState state)
         {
-            Console.WriteLine(message);
+            return null;
         }
+
+        public bool IsEnabled(LogLevel logLevel)
+        {
+            return true;
+        }
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+        {
+            //System.Diagnostics.Debug.WriteLine($"{logLevel} {state.ToString()}");
+            Console.WriteLine($"[{DateTime.Now}] {logLevel} {state.ToString()}");
+        }
+
+        //public override void Trace(Microsoft.Azure.WebJobs.Host.TraceEvent traceEvent)
+        //{
+        //    System.Diagnostics.Debug.WriteLine(traceEvent.Message);
+        //}
     }
-
-
     /// <summary>
     /// Console Context holds the various properties to be populated/validated by the chain of responsibility.
     /// </summary>
@@ -55,7 +69,6 @@ namespace SharpHound
         private static readonly string ProcStartTime = $"{DateTime.Now:yyyyMMddHHmmss}";
         private static string _currentLoopTime = $"{DateTime.Now:yyyyMMddHHmmss}";
         private static readonly Random RandomGen = new Random();
-
 
         BaseContext(LDAPQueryOptions options)
         {
@@ -79,7 +92,7 @@ namespace SharpHound
         public Cache Cache { get; set; }
         public bool IsFaulted { get; set; }
         public string CurrentUserName { get; set; }
-        public ConsolePrinter Printer { get; set; }
+        public ILogger Logger { get; set; }
         public System.Timers.Timer Timer { get; set; }
         public DateTime LoopEnd { get; set; }
         public TimeSpan? LoopDuration { get; set; }
@@ -100,10 +113,11 @@ namespace SharpHound
 
         public Task PipelineCompletionTask { get; set; }
         public Flags Flags { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        ResolvedCollectionMethod Context.ResolvedCollectionMethods { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
-        public BaseContext(ConsolePrinter printer, LDAPQueryOptions options, Flags flags)
+        public BaseContext(ILogger logger, LDAPQueryOptions options, Flags flags)
         {
-            Printer = printer;
+            Logger = logger;
             Options = options;
             Flags = Flags;
             Cache.CreateNewCache();
@@ -166,7 +180,8 @@ namespace SharpHound
             var original = ResolvedCollectionMethods;
             const CollectionMethodResolved computerCollectionMethod = CollectionMethodResolved.LocalGroups | CollectionMethodResolved.LoggedOn |
                                                   CollectionMethodResolved.Sessions;
-            return original & computerCollectionMethod;
+            //return original & computerCollectionMethod;
+            throw new NotImplementedException();
         }
 
         internal bool IsComputerCollectionSet()
@@ -214,6 +229,16 @@ namespace SharpHound
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
+
+        CollectionMethodResolved Context.GetLoopCollectionMethods()
+        {
+            throw new NotImplementedException();
+        }
+
+        bool Context.IsComputerCollectionSet()
+        {
+            throw new NotImplementedException();
+        }
     }
 
     class SharpLinks : Links<Context>
@@ -235,7 +260,7 @@ namespace SharpHound
         public Context BuildPipeline(Context context)
         {
             ///7. Build our pipeline, and get the initial block to wait for completion.
-            context.PipelineCompletionTask = PipelineBuilder.GetBasePipelineForDomain(context);
+            // context.PipelineCompletionTask = PipelineBuilder.GetBasePipelineForDomain(context);
             return context;
         }
 
@@ -267,9 +292,7 @@ namespace SharpHound
         {
             ////16. And we're done!
             var currTime = DateTime.Now;
-            context.Printer.WriteLine(string.Empty);
-            context.Printer.WriteLine($"SharpHound Enumeration Completed at {currTime.ToShortTimeString()} on {currTime.ToShortDateString()}! Happy Graphing!");
-            context.Printer.WriteLine(string.Empty);
+            context.Logger.LogTrace($"SharpHound Enumeration Completed at {currTime.ToShortTimeString()} on {currTime.ToShortDateString()}! Happy Graphing!");
             return context;
         }
 
@@ -283,17 +306,17 @@ namespace SharpHound
             //We've successfully parsed arguments, lets do some options post-processing.
             var currentTime = DateTime.Now;
             var initString = $"Initializing SharpHound at {currentTime.ToShortTimeString()} on {currentTime.ToShortDateString()}";
-            context.Printer.WriteLine(new string('-', initString.Length));
-            context.Printer.WriteLine(initString);
-            context.Printer.WriteLine(new string('-', initString.Length));
-            context.Printer.WriteLine(String.Empty);
+            context.Logger.LogTrace(new string('-', initString.Length));
+            context.Logger.LogTrace(initString);
+            context.Logger.LogTrace(new string('-', initString.Length));
+            context.Logger.LogTrace(String.Empty);
 
             // Check to make sure both LDAP options are set if either is set
             
             if ((ldapPassword != null && ldapUsername == null) ||
                 (ldapUsername != null && ldapPassword == null))
             {
-                context.Printer.WriteLine("You must specify both LdapUsername and LdapPassword if using these options!");
+                context.Logger.LogTrace("You must specify both LdapUsername and LdapPassword if using these options!");
                 return context;
             }
 
@@ -303,7 +326,7 @@ namespace SharpHound
                 //If loop is set, ensure we actually set options properly
                 if (context.LoopDuration == null || context.LoopDuration == TimeSpan.Zero)
                 {
-                    context.Printer.WriteLine("Loop specified without a duration. Defaulting to 2 hours!");
+                    context.Logger.LogTrace("Loop specified without a duration. Defaulting to 2 hours!");
                     context.LoopDuration = TimeSpan.FromHours(2);
                 }
 
@@ -353,27 +376,27 @@ namespace SharpHound
                 {
                     if (context.CancellationTokenSource.IsCancellationRequested)
                     {
-                        context.Printer.WriteLine("Skipping looping because loop duration has already passed");
+                        context.Logger.LogTrace("Skipping looping because loop duration has already passed");
                     }
                     else
                     {
-                        context.Printer.WriteLine(string.Empty);
-                        context.Printer.WriteLine("Waiting 30 seconds before starting loops");
+                        context.Logger.LogTrace(string.Empty);
+                        context.Logger.LogTrace("Waiting 30 seconds before starting loops");
                         try
                         {
                             Task.Delay(TimeSpan.FromSeconds(30), context.CancellationTokenSource.Token).Wait();
                         }
                         catch (TaskCanceledException)
                         {
-                            context.Printer.WriteLine("Skipped wait because loop duration has completed!");
+                            context.Logger.LogTrace("Skipped wait because loop duration has completed!");
                         }
 
                     if (!context.CancellationTokenSource.IsCancellationRequested)
                         {
-                            context.Printer.WriteLine(string.Empty);
-                            context.Printer.WriteLine($"Loop Enumeration Methods: {context.CollectionMethods}");
-                            context.Printer.WriteLine($"Looping scheduled to stop at {context.LoopEnd.ToLongTimeString()} on {context.LoopEnd.ToShortDateString()}");
-                            context.Printer.WriteLine(string.Empty);
+                            context.Logger.LogTrace(string.Empty);
+                            context.Logger.LogTrace($"Loop Enumeration Methods: {context.CollectionMethods}");
+                            context.Logger.LogTrace($"Looping scheduled to stop at {context.LoopEnd.ToLongTimeString()} on {context.LoopEnd.ToShortDateString()}");
+                            context.Logger.LogTrace(string.Empty);
                         }
 
                         var count = 0;
@@ -381,33 +404,33 @@ namespace SharpHound
                         {
                             count++;
                             var currentTime = DateTime.Now;
-                            context.Printer.WriteLine($"Starting loop #{count} at {currentTime.ToShortTimeString()} on {currentTime.ToShortDateString()}");
+                            context.Logger.LogTrace($"Starting loop #{count} at {currentTime.ToShortTimeString()} on {currentTime.ToShortDateString()}");
                             context.StartNewRun();
-                            context.PipelineCompletionTask = PipelineBuilder.GetLoopPipelineForDomain(context);
+                            // context.PipelineCompletionTask = PipelineBuilder.GetLoopPipelineForDomain(context);
                             context.PipelineCompletionTask.Wait();
-                            OutputTasks.CompleteOutput(context).Wait();
+                            // OutputTasks.CompleteOutput(context).Wait();
 
                             if (!context.CancellationTokenSource.Token.IsCancellationRequested)
                             {
-                                context.Printer.WriteLine(string.Empty);
-                                context.Printer.WriteLine($"Waiting {context.LoopInterval?.TotalSeconds} seconds for next loop");
-                                context.Printer.WriteLine(string.Empty);
+                                context.Logger.LogTrace(string.Empty);
+                                context.Logger.LogTrace($"Waiting {context.LoopInterval?.TotalSeconds} seconds for next loop");
+                                context.Logger.LogTrace(string.Empty);
                                 try
                                 {
                                     Task.Delay((TimeSpan)context.LoopInterval, context.CancellationTokenSource.Token).Wait();
                                 }
                                 catch (TaskCanceledException)
                                 {
-                                    context.Printer.WriteLine("Skipping wait as loop duration has expired");
+                                    context.Logger.LogTrace("Skipping wait as loop duration has expired");
                                 }
                             }
                         }
 
                         if (count > 0)
-                            context.Printer.WriteLine($"Looping finished! Looped a total of {count} times");
+                            context.Logger.LogTrace($"Looping finished! Looped a total of {count} times");
 
                         //Special function to grab all the zip files created by looping and collapse them into a single file
-                        OutputTasks.CollapseLoopZipFiles(context).Wait();
+                        // OutputTasks.CollapseLoopZipFiles(context).Wait();
                     }
                 }
 
@@ -443,7 +466,7 @@ namespace SharpHound
         public Context  StartTheComputerErrorTask(Context context)
         {
             ////6. Start the computer error task (if specified)
-            OutputTasks.StartComputerStatusTask(context);
+            // OutputTasks.StartComputerStatusTask(context);
             return context;
         }
 
@@ -452,15 +475,15 @@ namespace SharpHound
             //3. TestConnection()
             // Initial LDAP connection test. Search for the well known administrator SID to make sure we can connect successfully.
             // TODO: replace with new LdapUtils call (?)
-            object result = await searcher.GetOne("(objectclass=domain)", new[] { "objectsid" }, SearchScope.Subtree);
+            // object result = await searcher.GetOne("(objectclass=domain)", new[] { "objectsid" }, SearchScope.Subtree);
 
             //If we get nothing back from LDAP, something is wrong
-            if (result == null)
-            {
-                context.Printer.WriteLine("LDAP Connection Test Failed. Check if you're in a domain context!");
-                context.Flags.IsFaulted = true;
-                return context;
-            }
+            //if (result == null)
+            //{
+            //    context.Logger.LogTrace("LDAP Connection Test Failed. Check if you're in a domain context!");
+            //    context.Flags.IsFaulted = true;
+            //    return context;
+            //}
 
             context.Flags.InitialCompleted = false;
             context.Flags.NeedsCancellation = false;
@@ -472,6 +495,8 @@ namespace SharpHound
     }
 
     #endregion
+
+    #region Console Entrypoint
 
     class Program
     {
@@ -556,7 +581,8 @@ namespace SharpHound
             TimeSpan? LoopInterval = null
         )
         {
-            ConsolePrinter consoleWrapper = new ConsoleWrapper();
+            // Setup Logging       
+            var logger = new VerboseDiagnosticsTraceWriter();
 
             Flags flags = new Flags()
             {
@@ -583,7 +609,7 @@ namespace SharpHound
             };
 
             // Context for this execution
-            Context context = new BaseContext(consoleWrapper, options, flags)
+            Context context = new BaseContext(logger, options, flags)
             {
                 DomainName = Domain,
                 CacheFileName = CacheFilename,
@@ -618,4 +644,5 @@ namespace SharpHound
             links.Finish(context);
         }
     }
+    #endregion
 }

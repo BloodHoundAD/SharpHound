@@ -1,4 +1,5 @@
-﻿using SharpHound.Enums;
+﻿using Microsoft.Extensions.Logging;
+using SharpHound.Enums;
 using SharpHoundCommonLib;
 using SharpHoundCommonLib.Enums;
 using System;
@@ -9,12 +10,20 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 
-namespace SharpHound.Core
+namespace SharpHound.Core.Behavior
 {
     internal class FileExistsException : Exception
     {
         public FileExistsException(string message) : base(message)
         {
+        }
+    }
+
+    public static class ContextUtils
+    {
+        public static Dictionary<string, object> Merge(this Dictionary<string, object> dict, Dictionary<string, object> delta)
+        {
+            return dict.Concat(delta).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
         }
     }
 
@@ -37,7 +46,8 @@ namespace SharpHound.Core
         string RealDNSName {get; set; }
         Task PipelineCompletionTask { get; set; }
         CancellationTokenSource CancellationTokenSource { get; set; }
-        ConsolePrinter Printer { get; set; }
+
+        ILogger Logger { get; set; }
         ILDAPUtils LDAPUtils { get; set; }
 
         string OutputPrefix { get; set; }
