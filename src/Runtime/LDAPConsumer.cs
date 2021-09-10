@@ -29,17 +29,6 @@ namespace SharpHound.Core.Behavior
                         
                         if (res == null)
                             continue;
-                        
-                        //If the item is deleted, enqueue the object id and then continue. We don't need to process anything else here
-                        if (res.Deleted)
-                        {
-                            await outputChannel.Writer.WriteAsync(new OutputBase
-                            {
-                                IsDeleted = true,
-                                ObjectIdentifier = res.ObjectId
-                            });
-                            continue;
-                        }
 
                         log.LogTrace("Consumer {ThreadID} is processing {obj}", threadId, res.DisplayName);
                         watch.Start();

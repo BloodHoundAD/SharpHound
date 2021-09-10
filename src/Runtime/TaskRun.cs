@@ -82,10 +82,6 @@ namespace SharpHound.Core.Behavior
                 }
                 catch (APIException e)
                 {
-                    //if (e.ApplicationCritical)
-                    //    Helpers.StopService();
-                    //else if (e.TaskCritical)
-                    //    _cancellationTokenSource.Cancel();
                     throw e.InnerException;
                 }
 

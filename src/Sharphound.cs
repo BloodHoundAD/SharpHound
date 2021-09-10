@@ -52,12 +52,8 @@ namespace SharpHound
             //System.Diagnostics.Debug.WriteLine($"{logLevel} {state.ToString()}");
             Console.WriteLine($"[{DateTime.Now}] {logLevel} {state.ToString()}");
         }
-
-        //public override void Trace(Microsoft.Azure.WebJobs.Host.TraceEvent traceEvent)
-        //{
-        //    System.Diagnostics.Debug.WriteLine(traceEvent.Message);
-        //}
     }
+    
     /// <summary>
     /// Console Context holds the various properties to be populated/validated by the chain of responsibility.
     /// </summary>
@@ -77,14 +73,19 @@ namespace SharpHound
             Options = options;
         }
 
+        public PipelineBuilder PipelineBuilder { get; set; }
+
+        public OutputTasks OutputTasks { get; set; }
+
         public CollectionMethodResolved ResolvedCollectionMethods { get; set; }
 
         public LDAPQueryOptions Options { get; set; }
         public IEnumerable<string> CollectionMethods { get; set; }
+
+        public string LdapFilter { get; set; }
         public string SearchBase { get; set; }
         public string DomainName { get; set; }
         public string CacheFileName { get; set; }
-
         public string ComputerFile { get; set; }
         public string ZipFilename { get; set; }
 
@@ -106,21 +107,23 @@ namespace SharpHound
         public int Throttle { get; set; }
         public int Jitter { get; set; }
 
-        public CancellationTokenSource CancellationTokenSource { get; set; }
+        public int PortScanTimeout { get; set; }
 
+        public CancellationTokenSource CancellationTokenSource { get; set; }
 
         public ILDAPUtils LDAPUtils { get; set; }
 
         public Task PipelineCompletionTask { get; set; }
-        public Flags Flags { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        ResolvedCollectionMethod Context.ResolvedCollectionMethods { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public Flags Flags { get; set; }
+        ResolvedCollectionMethod Context.ResolvedCollectionMethods { get; set; }
 
         public BaseContext(ILogger logger, LDAPQueryOptions options, Flags flags)
         {
             Logger = logger;
             Options = options;
-            Flags = Flags;
+            Flags = flags;
             Cache.CreateNewCache();
+            Console.WriteLine(Flags.Loop);
         }
 
         public string ResolveFileName(Context context, string filename, string extension, bool addTimestamp)
@@ -180,8 +183,8 @@ namespace SharpHound
             var original = ResolvedCollectionMethods;
             const CollectionMethodResolved computerCollectionMethod = CollectionMethodResolved.LocalGroups | CollectionMethodResolved.LoggedOn |
                                                   CollectionMethodResolved.Sessions;
-            //return original & computerCollectionMethod;
-            throw new NotImplementedException();
+            //return original & computerCollectionMethod; // TODO: figure out the bit shift here & computerCollectionMethod;
+            return ResolvedCollectionMethod.None; 
         }
 
         internal bool IsComputerCollectionSet()
@@ -243,14 +246,14 @@ namespace SharpHound
 
     class SharpLinks : Links<Context>
     {
-        public Context AwaitOutputTasks(Context context)
+        public async Task<Context> AwaitOutputTasks(Context context)
         {
             ////10. Wait for our output tasks to finish.
-            // OutputTasks.CompleteOutput();
+            await OutputTasks.CompleteOutput(context);
             return context;
         }
 
-        public Context AwaitPipelineCompeletionTask(Context context)
+        public async Task<Context> AwaitPipelineCompeletionTask(Context context)
         {
             /// 8/9. Wait for output to complete
             context.PipelineCompletionTask.Wait();
@@ -260,7 +263,7 @@ namespace SharpHound
         public Context BuildPipeline(Context context)
         {
             ///7. Build our pipeline, and get the initial block to wait for completion.
-            // context.PipelineCompletionTask = PipelineBuilder.GetBasePipelineForDomain(context);
+            context.PipelineCompletionTask = PipelineBuilder.GetBasePipelineForDomain(context);
             return context;
         }
 
@@ -310,7 +313,6 @@ namespace SharpHound
             context.Logger.LogTrace(initString);
             context.Logger.LogTrace(new string('-', initString.Length));
             context.Logger.LogTrace(String.Empty);
-
             // Check to make sure both LDAP options are set if either is set
             
             if ((ldapPassword != null && ldapUsername == null) ||
@@ -371,7 +373,7 @@ namespace SharpHound
 
         public Context StartLoop(Context context)
         {
-                // 13.Start looping if specified
+             // 13.Start looping if specified
              if (context.Flags.Loop)
                 {
                     if (context.CancellationTokenSource.IsCancellationRequested)
@@ -406,9 +408,9 @@ namespace SharpHound
                             var currentTime = DateTime.Now;
                             context.Logger.LogTrace($"Starting loop #{count} at {currentTime.ToShortTimeString()} on {currentTime.ToShortDateString()}");
                             context.StartNewRun();
-                            // context.PipelineCompletionTask = PipelineBuilder.GetLoopPipelineForDomain(context);
+                            context.PipelineCompletionTask = PipelineBuilder.GetBasePipelineForDomain(context);
                             context.PipelineCompletionTask.Wait();
-                            // OutputTasks.CompleteOutput(context).Wait();
+                            OutputTasks.CompleteOutput(context).Wait();
 
                             if (!context.CancellationTokenSource.Token.IsCancellationRequested)
                             {
@@ -430,7 +432,7 @@ namespace SharpHound
                             context.Logger.LogTrace($"Looping finished! Looped a total of {count} times");
 
                         //Special function to grab all the zip files created by looping and collapse them into a single file
-                        // OutputTasks.CollapseLoopZipFiles(context).Wait();
+                        OutputTasks.CollapseLoopZipFiles(context).Wait();
                     }
                 }
 
@@ -443,20 +445,20 @@ namespace SharpHound
             //If loop is set, set up our timer for the loop now
             if (context.Flags.Loop)
             {
-                // context.LoopEnd = context.LoopEnd.AddMilliseconds(context.LoopDuration.TotalMilliseconds); TOOD: update call
+                context.LoopEnd = context.LoopEnd.AddMilliseconds(context.LoopDuration.Value.TotalMilliseconds);
                 context.Timer = new Timer();
                 context.Timer.Elapsed += (sender, eventArgs) =>
                 {
                     if (context.Flags.InitialCompleted)
                     {
-                        // Helpers.InvokeCancellation();
+                        context.CancellationTokenSource.Cancel();
                     }
                     else
                     {
                        context.Flags.NeedsCancellation = true;
                     }
                 };
-                // context.Timer.Interval = context.LoopDuration.TotalMilliseconds; TOOD: update call
+                context.Timer.Interval = context.LoopDuration.Value.TotalMilliseconds;
                 context.Timer.AutoReset = false;
                 context.Timer.Start();
             }
@@ -466,7 +468,7 @@ namespace SharpHound
         public Context  StartTheComputerErrorTask(Context context)
         {
             ////6. Start the computer error task (if specified)
-            // OutputTasks.StartComputerStatusTask(context);
+            OutputTasks.StartComputerStatusTask(context);
             return context;
         }
 
@@ -474,16 +476,15 @@ namespace SharpHound
         {
             //3. TestConnection()
             // Initial LDAP connection test. Search for the well known administrator SID to make sure we can connect successfully.
-            // TODO: replace with new LdapUtils call (?)
-            // object result = await searcher.GetOne("(objectclass=domain)", new[] { "objectsid" }, SearchScope.Subtree);
+            var result = context.LDAPUtils.QueryLDAP("(objectclass=domain)", System.DirectoryServices.Protocols.SearchScope.Subtree, new[] { "objectsid" });
 
-            //If we get nothing back from LDAP, something is wrong
-            //if (result == null)
-            //{
-            //    context.Logger.LogTrace("LDAP Connection Test Failed. Check if you're in a domain context!");
-            //    context.Flags.IsFaulted = true;
-            //    return context;
-            //}
+            // If we get nothing back from LDAP, something is wrong
+            if (result == null)
+            {
+               context.Logger.LogTrace("LDAP Connection Test Failed. Check if you're in a domain context!");
+               context.Flags.IsFaulted = true;
+               return context;
+            }
 
             context.Flags.InitialCompleted = false;
             context.Flags.NeedsCancellation = false;
@@ -606,6 +607,7 @@ namespace SharpHound
 
             LDAPQueryOptions options = new LDAPQueryOptions
             {
+
             };
 
             // Context for this execution
@@ -620,7 +622,9 @@ namespace SharpHound
                 ComputerFile = ComputerFile,
                 OutputDirectory = OutputDirectory,
                 Jitter = Jitter,
-                Throttle = Throttle
+                Throttle = Throttle,
+                LdapFilter = LdapFilter,
+                PortScanTimeout = PortScanTimeout
             };
 
             // Create new chain links
@@ -644,5 +648,6 @@ namespace SharpHound
             links.Finish(context);
         }
     }
+    
     #endregion
 }

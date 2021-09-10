@@ -20,8 +20,8 @@ namespace SharpHound.Core
         Context CreateCache(T context);
         Context StartTheComputerErrorTask(T context);
         Context BuildPipeline(T context);
-        Context AwaitPipelineCompeletionTask(T context);
-        Context AwaitOutputTasks(T context);
+        Task<Context> AwaitPipelineCompeletionTask(T context);
+        Task<Context> AwaitOutputTasks(T context);
         Context MarkRunComplete(T context);
         Context CancellationCheck(T context);
         Context StartLoop(T context);

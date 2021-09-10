@@ -8,15 +8,12 @@
   <ItemGroup>
     <Compile Remove="src\JSON\**" />
     <Compile Remove="src\LdapWrappers\**" />
-    <Compile Remove="src\Producers\**" />
     <Compile Remove="src\Tasks\**" />
     <EmbeddedResource Remove="src\JSON\**" />
     <EmbeddedResource Remove="src\LdapWrappers\**" />
-    <EmbeddedResource Remove="src\Producers\**" />
     <EmbeddedResource Remove="src\Tasks\**" />
     <None Remove="src\JSON\**" />
     <None Remove="src\LdapWrappers\**" />
-    <None Remove="src\Producers\**" />
     <None Remove="src\Tasks\**" />
   </ItemGroup>
 

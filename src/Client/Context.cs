@@ -29,9 +29,14 @@ namespace SharpHound.Core.Behavior
 
     public interface Context
     {
+        PipelineBuilder PipelineBuilder { get; set; }
+        OutputTasks OutputTasks { get; set; }
+
         Flags Flags { get; set; }
         LDAPQueryOptions Options { get; set; }
         IEnumerable<string> CollectionMethods { get; set; }
+
+        string LdapFilter { get; set; }
         string SearchBase { get; set; }
         string DomainName { get; set; }
         string CacheFileName { get; set; }
@@ -57,6 +62,8 @@ namespace SharpHound.Core.Behavior
 
         int Throttle { get; set; }
         int Jitter { get; set; }
+
+        int PortScanTimeout { get; set; }
 
         ResolvedCollectionMethod ResolvedCollectionMethods { get; set; }
 
