@@ -637,8 +637,8 @@ namespace SharpHound
             links.StartLoopTimer(context);
             links.CreateCache(context);
             links.StartTheComputerErrorTask(context);
-            links.BuildPipeline(context);
-            links.AwaitPipelineCompeletionTask(context);
+            // links.BuildPipeline(context);
+            // links.AwaitPipelineCompeletionTask(context);
             links.AwaitOutputTasks(context);
             links.MarkRunComplete(context);
             links.CancellationCheck(context);

@@ -2,6 +2,7 @@
 using SharpHoundCommonLib;
 using System;
 using System.DirectoryServices.Protocols;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
@@ -14,7 +15,7 @@ namespace SharpHound.Producers
     internal class ComputerFileProducer : BaseProducer
     {
 
-        public ComputerFileProducer(Context context, string domainName, string query, string[] props) : base(context, domainName, query, props)
+        public ComputerFileProducer(Context context, string domainName, string query, IEnumerable<ISearchResultEntry> props) : base(context, domainName, query, props)
         {
         }
 
@@ -61,7 +62,7 @@ namespace SharpHound.Producers
                         {
                             //Convert the sid to a hex representation and find the entry in the domain
                             var hexSid =  Helpers.ConvertSidToHexSid(sid);
-                            var entry = context.LDAPUtils.QueryLDAP($"(objectsid={hexSid})", SearchScope.Subtree, Props);
+                            var entry = context.LDAPUtils.QueryLDAP($"(objectsid={hexSid})", SearchScope.Subtree, Props); //TODO Update call
                             if (entry == null)
                             {
                                 //We couldn't find the entry for whatever reason

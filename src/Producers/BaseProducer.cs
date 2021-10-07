@@ -17,13 +17,13 @@ namespace SharpHound.Producers
         protected static Dictionary<string, ISearchResultEntry> DomainControllerSids;
         protected readonly DirectorySearcher Searcher;
         protected readonly string Query;
-        protected readonly string[] Props;
+        protected readonly IEnumerable<ISearchResultEntry> Props;
         protected readonly string DomainName;
 
-        protected BaseProducer(Context context, string domainName, string query, string[] props)
+        protected BaseProducer(Context context, string domainName, string query, IEnumerable<ISearchResultEntry> props)
         {
             //Create a Directory Searcher using the domain specified
-            Searcher = ClientHelpers.GetDirectorySearcher(domainName);
+            Searcher = ClientHelpers.GetDirectorySearcher(context);
             Query = query;
             Props = props;
             DomainName = domainName;

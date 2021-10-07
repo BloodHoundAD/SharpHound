@@ -18,7 +18,7 @@ namespace SharpHound.Producers
         private static Dictionary<string, ISearchResultEntry> _stealthTargetSids;
         private bool _stealthTargetsBuilt;
 
-        public StealthProducer(Context context, string domainName, string query, string[] props) : base(context, domainName, query, props)
+        public StealthProducer(Context context, string domainName, string query, IEnumerable<ISearchResultEntry> props) : base(context, domainName, query, props)
         {
         }
 

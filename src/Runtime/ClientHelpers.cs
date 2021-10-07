@@ -149,9 +149,9 @@ namespace SharpHound.Core.Behavior
             return Label.Base; // TODO: double check this
         }
 
-        internal static DirectorySearcher GetDirectorySearcher(string domain)
+        internal static DirectorySearcher GetDirectorySearcher(Context context)
         {
-            var key = NormalizeDomainName(domain) ?? NullKey;
+            var key = ClientHelpers.NormalizeDomainName(context, context.DomainName) ?? NullKey;
             if (DirectorySearchMap.TryGetValue(key, out var searcher))
                 return searcher;
 
@@ -176,7 +176,7 @@ namespace SharpHound.Core.Behavior
         /// <param name="sid"></param>
         /// <param name="domain"></param>
         /// <returns>Prepended SID or same sid</returns>
-        internal static string ConvertCommonSid(string sid, string domain)
+        internal static string ConvertCommonSid(Context context, string sid, string domain)
         {
             if (WellKnownPrincipal.GetWellKnownPrincipal(sid, out _))
             {
@@ -186,7 +186,7 @@ namespace SharpHound.Core.Behavior
                     return $"{forest}-{sid}".ToUpper();
                 }
 
-                var nDomain = NormalizeDomainName(domain);
+                var nDomain = ClientHelpers.NormalizeDomainName(context, context.DomainName);
                 if (sid != "S-1-1-0" && sid != "S-1-5-11")
                     OutputTasks.SeenCommonPrincipals.TryAdd(nDomain, sid);
                 return $"{nDomain}-{sid}";
@@ -200,9 +200,9 @@ namespace SharpHound.Core.Behavior
         /// </summary>
         /// <param name="domain"></param>
         /// <returns>Resolver</returns>
-        internal static LookupClient GetDNSResolver(string domain)
+        internal static LookupClient GetDNSResolver(Context context)
         {
-            var domainName = NormalizeDomainName(domain);
+            var domainName = ClientHelpers.NormalizeDomainName(context, context.DomainName);
             var key = domainName ?? NullKey;
 
             if (DNSResolverCache.TryGetValue(key, out var resolver))
@@ -214,7 +214,7 @@ namespace SharpHound.Core.Behavior
             var newServerList = new List<IPEndPoint>();
 
             // Try to find a DC in our target domain that has 53 open
-            var dnsServer = FindDomainDNSServer(domainName);
+            var dnsServer = FindDomainDNSServer(context);
             if (dnsServer != null)
             {
                 // Resolve the DC to an IP and add it to our nameservers
@@ -224,7 +224,7 @@ namespace SharpHound.Core.Behavior
                     newServerList.Add(new IPEndPoint(resolved, 53));
             }
 
-            newServerList.AddRange(resolver.NameServers.Select(server => server.Endpoint));
+            newServerList.AddRange(resolver.NameServers.Select(server => new IPEndPoint(long.Parse(server.Address), server.Port)));
 
 
             resolver = new LookupClient(newServerList.ToArray());
@@ -237,10 +237,10 @@ namespace SharpHound.Core.Behavior
         /// </summary>
         /// <param name="domain"></param>
         /// <returns></returns>
-        private static string FindDomainDNSServer(Context context, string domain)
+        public static string FindDomainDNSServer(Context context)
         {
-            var searcher = GetDirectorySearcher(domain);
-            domain = NormalizeDomainName(domain);
+            var searcher = GetDirectorySearcher(context);
+            context.DomainName = ClientHelpers.NormalizeDomainName(context, context.DomainName); //TODO: this now feels circular
             string target = null;
             //Find all DCs in the target domain
             foreach (var result in context.LDAPUtils.QueryLDAP(
@@ -252,8 +252,8 @@ namespace SharpHound.Core.Behavior
                 if (target == null)
                     continue;
 
-                target = $"{target}.{domain}";
-                if (CheckHostPort(target, 53))
+                target = $"{target}.{context.DomainName}";
+                if (CheckHostPort(context, target, 53))
                     break;
 
                 target = null;
@@ -296,7 +296,7 @@ namespace SharpHound.Core.Behavior
             var key = $"{hostname}-{port}".ToUpper();
             if (PingCache.TryGetValue(key, out var portOpen)) return portOpen;
 
-            portOpen = CheckHostPort(hostname, port);
+            portOpen = CheckHostPort(context, hostname, port);
             PingCache.TryAdd(key, portOpen);
             return portOpen;
         }
@@ -333,14 +333,14 @@ namespace SharpHound.Core.Behavior
         /// </summary>
         /// <param name="domain"></param>
         /// <returns></returns>
-        internal static string NormalizeDomainName(string domain)
+        internal static string NormalizeDomainName(Context context, string domain)
         {
             var resolved = domain;
 
             if (resolved.Contains("."))
                 return domain.ToUpper();
 
-            resolved = ResolutionHelpers.ResolveDomainNetbiosToDns(domain) ?? domain;
+            // resolved = context.LDAPUtils.ResolutionHelpers.ResolveDomainNetbiosToDns(domain) ?? domain; TODO: Update this call https://github.com/BloodHoundAD/SharpHoundCommon/blob/74f0cfbb65c5e13198d864440280427e151af764/src/CommonLib/LDAPUtils.cs#L1181
 
             return resolved.ToUpper();
         }

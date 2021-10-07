@@ -55,7 +55,7 @@ namespace SharpHound.Core.Behavior
              var blocks = new List<TransformBlock<LdapWrapper, LdapWrapper>>();
 
              //The first block will always convert searchresults to the wrapper object
-             var findTypeBlock = new TransformBlock<ISearchResultEntry, LdapWrapper>(ConvertToWrapperTasks.CreateLdapWrapper, new ExecutionDataflowBlockOptions
+             var findTypeBlock = new TransformBlock<ISearchResultEntry, LdapWrapper>(SharpHound.Tasks.ConvertToWrapperTasks.CreateLdapWrapper, new ExecutionDataflowBlockOptions
              {
                  EnsureOrdered = false,
                  MaxDegreeOfParallelism = 10,
@@ -68,84 +68,86 @@ namespace SharpHound.Core.Behavior
             //Keep this variable to make instantiation easy
             TransformBlock<LdapWrapper, LdapWrapper> block = null;
 
-            //Start with pure LDAP collection methods
-            if ((resolvedMethods & CollectionMethodResolved.ACL) != 0)
-            {
-                block = new TransformBlock<LdapWrapper, LdapWrapper>(ACLTasks.ProcessAces, executionOptions);
-                blocks.Add(block);
-            }
+            //TODO: Update calls
 
-            if ((resolvedMethods & CollectionMethodResolved.Group) != 0)
-            {
-                block = new TransformBlock<LdapWrapper, LdapWrapper>(GroupEnumerationTasks.ProcessGroupMembership,
-                    executionOptions);
-                blocks.Add(block);
-            }
+            // //Start with pure LDAP collection methods
+            // if ((resolvedMethods & CollectionMethodResolved.ACL) != 0)
+            // {
+            //     block = new TransformBlock<LdapWrapper, LdapWrapper>(ACLTasks.ProcessAces, executionOptions);
+            //     blocks.Add(block);
+            // }
 
-            if ((resolvedMethods & CollectionMethodResolved.ObjectProps) != 0)
-            {
-                block = new TransformBlock<LdapWrapper, LdapWrapper>(ObjectPropertyTasks.ResolveObjectProperties,
-                    executionOptions);
-                blocks.Add(block);
-            }
+            // if ((resolvedMethods & CollectionMethodResolved.Group) != 0)
+            // {
+            //     block = new TransformBlock<LdapWrapper, LdapWrapper>(GroupEnumerationTasks.ProcessGroupMembership,
+            //         executionOptions);
+            //     blocks.Add(block);
+            // }
 
-            if ((resolvedMethods & CollectionMethodResolved.Container) != 0)
-            {
-                block = new TransformBlock<LdapWrapper, LdapWrapper>(ContainerTasks.EnumerateContainer,
-                    executionOptions);
-                blocks.Add(block);
-            }
+            // if ((resolvedMethods & CollectionMethodResolved.ObjectProps) != 0)
+            // {
+            //     block = new TransformBlock<LdapWrapper, LdapWrapper>(ObjectPropertyTasks.ResolveObjectProperties,
+            //         executionOptions);
+            //     blocks.Add(block);
+            // }
 
-            if ((resolvedMethods & CollectionMethodResolved.GPOLocalGroup) != 0)
-            {
-                block = new TransformBlock<LdapWrapper, LdapWrapper>(GPOGroupTasks.ParseGPOLocalGroups,
-                    executionOptions);
-                blocks.Add(block);
-            }
+            // if ((resolvedMethods & CollectionMethodResolved.Container) != 0)
+            // {
+            //     block = new TransformBlock<LdapWrapper, LdapWrapper>(ContainerTasks.EnumerateContainer,
+            //         executionOptions);
+            //     blocks.Add(block);
+            // }
 
-            if ((resolvedMethods & CollectionMethodResolved.SPNTargets) != 0)
-            {
-                block = new TransformBlock<LdapWrapper, LdapWrapper>(SPNTasks.ProcessSPNS, executionOptions);
-                blocks.Add(block);
-            }
+            // if ((resolvedMethods & CollectionMethodResolved.GPOLocalGroup) != 0)
+            // {
+            //     block = new TransformBlock<LdapWrapper, LdapWrapper>(GPOGroupTasks.ParseGPOLocalGroups,
+            //         executionOptions);
+            //     blocks.Add(block);
+            // }
 
-            if ((resolvedMethods & CollectionMethodResolved.Trusts) != 0)
-            {
-                block = new TransformBlock<LdapWrapper, LdapWrapper>(TrustTasks.ResolveDomainTrusts, executionOptions);
-                blocks.Add(block);
-            }
+            // if ((resolvedMethods & CollectionMethodResolved.SPNTargets) != 0)
+            // {
+            //     block = new TransformBlock<LdapWrapper, LdapWrapper>(SPNTasks.ProcessSPNS, executionOptions);
+            //     blocks.Add(block);
+            // }
+
+            // if ((resolvedMethods & CollectionMethodResolved.Trusts) != 0)
+            // {
+            //     block = new TransformBlock<LdapWrapper, LdapWrapper>(TrustTasks.ResolveDomainTrusts, executionOptions);
+            //     blocks.Add(block);
+            // }
 
             //Start computer block
 
             //Only add this block if there's actually computer collection happening 
-            if (context.IsComputerCollectionSet())
-            {
-                block = new TransformBlock<LdapWrapper, LdapWrapper>(ComputerAvailableTasks.CheckSMBOpen,
-                    executionOptions);
-                blocks.Add(block);
-            }
+            // if (context.IsComputerCollectionSet())
+            // {
+            //     block = new TransformBlock<LdapWrapper, LdapWrapper>(ComputerAvailableTasks.CheckSMBOpen,
+            //         executionOptions);
+            //     blocks.Add(block);
+            // }
 
-            if ((resolvedMethods & CollectionMethodResolved.Sessions) != 0)
-            {
-                block = new TransformBlock<LdapWrapper, LdapWrapper>(NetSessionTasks.ProcessNetSessions,
-                    executionOptions);
-                blocks.Add(block);
-            }
+            // if ((resolvedMethods & CollectionMethodResolved.Sessions) != 0)
+            // {
+            //     block = new TransformBlock<LdapWrapper, LdapWrapper>(NetSessionTasks.ProcessNetSessions,
+            //         executionOptions);
+            //     blocks.Add(block);
+            // }
 
-            if ((resolvedMethods & CollectionMethodResolved.RDP) != 0 || (resolvedMethods & CollectionMethodResolved.DCOM) != 0 ||
-                (resolvedMethods & CollectionMethodResolved.LocalAdmin) != 0 ||
-                (resolvedMethods & CollectionMethodResolved.PSRemote) != 0)
-            {
-                block = new TransformBlock<LdapWrapper, LdapWrapper>(LocalGroupTasks.GetLocalGroupMembers,
-                    executionOptions);
-                blocks.Add(block);
-            }
+            // if ((resolvedMethods & CollectionMethodResolved.RDP) != 0 || (resolvedMethods & CollectionMethodResolved.DCOM) != 0 ||
+            //     (resolvedMethods & CollectionMethodResolved.LocalAdmin) != 0 ||
+            //     (resolvedMethods & CollectionMethodResolved.PSRemote) != 0)
+            // {
+            //     block = new TransformBlock<LdapWrapper, LdapWrapper>(LocalGroupTasks.GetLocalGroupMembers,
+            //         executionOptions);
+            //     blocks.Add(block);
+            // }
 
-            if ((resolvedMethods & CollectionMethodResolved.LoggedOn) != 0)
-            {
-                block = new TransformBlock<LdapWrapper, LdapWrapper>(LoggedOnTasks.ProcessLoggedOn, executionOptions);
-                blocks.Add(block);
-            }
+            // if ((resolvedMethods & CollectionMethodResolved.LoggedOn) != 0)
+            // {
+            //     block = new TransformBlock<LdapWrapper, LdapWrapper>(LoggedOnTasks.ProcessLoggedOn, executionOptions);
+            //     blocks.Add(block);
+            // }
 
             if (blocks.Count == 0)
             {
@@ -179,7 +181,7 @@ namespace SharpHound.Core.Behavior
             else
             {
                    //The output block should only have a single thread for writing to prevent issues
-                   outputBlock = new ActionBlock<LdapWrapper>(OutputTasks.WriteJsonOutput(), new ExecutionDataflowBlockOptions
+                   outputBlock = new ActionBlock<LdapWrapper>(OutputTasks.WriteJsonOutput, new ExecutionDataflowBlockOptions
                    {
                        BoundedCapacity = 500,
                        MaxDegreeOfParallelism = 1,
@@ -191,4 +193,5 @@ namespace SharpHound.Core.Behavior
             producer.StartProducer(context, findTypeBlock);
             return outputBlock.Completion;
         }
+    }
 }

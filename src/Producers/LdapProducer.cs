@@ -1,6 +1,7 @@
 ﻿using SharpHound.Core.Behavior;
 using SharpHoundCommonLib;
 using System;
+using System.Collections.Generic;
 using System.DirectoryServices.Protocols;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
@@ -9,7 +10,7 @@ namespace SharpHound.Producers
 {
     public class LdapProducer : BaseProducer
     {
-        public LdapProducer(Context context, string domainName, string query, string[] props) : base(context, domainName, query, props)
+        public LdapProducer(Context context, string domainName, string query, IEnumerable<ISearchResultEntry> props) : base(context, domainName, query, props)
         {
         }
 

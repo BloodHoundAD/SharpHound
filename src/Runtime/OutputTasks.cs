@@ -25,12 +25,12 @@ namespace SharpHound.Core.Behavior
     {
         private static readonly List<string> UsedFileNames = new List<string>();
         private static readonly List<string> ZipFileNames = new List<string>();
-        private static Lazy<JsonFileWriter> _userOutput = new Lazy<JsonFileWriter>(() => new JsonFileWriter("users"), false);
-        private static Lazy<JsonFileWriter> _groupOutput = new Lazy<JsonFileWriter>(() => new JsonFileWriter("groups"), false);
-        private static Lazy<JsonFileWriter> _computerOutput = new Lazy<JsonFileWriter>(() => new JsonFileWriter("computers"), false);
-        private static Lazy<JsonFileWriter> _domainOutput = new Lazy<JsonFileWriter>(() => new JsonFileWriter("domains"), false);
-        private static Lazy<JsonFileWriter> _gpoOutput = new Lazy<JsonFileWriter>(() => new JsonFileWriter("gpos"), false);
-        private static Lazy<JsonFileWriter> _ouOutput = new Lazy<JsonFileWriter>(() => new JsonFileWriter("ous"), false);
+        private static Lazy<JsonFileWriter> _userOutput;
+        private static Lazy<JsonFileWriter> _groupOutput;
+        private static Lazy<JsonFileWriter> _computerOutput;
+        private static Lazy<JsonFileWriter> _domainOutput;
+        private static Lazy<JsonFileWriter> _gpoOutput;
+        private static Lazy<JsonFileWriter> _ouOutput;
         private static int _lastCount;
         private static int _currentCount;
         private static Timer _statusTimer;
@@ -40,6 +40,15 @@ namespace SharpHound.Core.Behavior
         public static readonly BlockingCollection<ComputerStatus> ComputerStatusQueue = new BlockingCollection<ComputerStatus>();
         public static readonly Lazy<string> ZipPasswords = new Lazy<string>(GenerateZipPassword);
         public static ConcurrentDictionary<string, string> SeenCommonPrincipals = new ConcurrentDictionary<string, string>();
+
+        public OutputTasks(Context context) {
+            _userOutput = new Lazy<JsonFileWriter>(() => new JsonFileWriter(context, "users"));
+            _groupOutput = new Lazy<JsonFileWriter>(() => new JsonFileWriter(context, "groups"));
+            _computerOutput = new Lazy<JsonFileWriter>(() => new JsonFileWriter(context, "computers"));
+            _domainOutput = new Lazy<JsonFileWriter>(() => new JsonFileWriter(context, "domains"));
+            _gpoOutput = new Lazy<JsonFileWriter>(() => new JsonFileWriter(context, "gpos"));
+            _ouOutput = new Lazy<JsonFileWriter>(() => new JsonFileWriter(context, "ous"));
+        }
 
         public static void StartOutputTimer(Context context)
         {
@@ -64,26 +73,27 @@ namespace SharpHound.Core.Behavior
                     : $"Status: {_currentCount} objects finished (+{_currentCount - _lastCount}) -- Using {Process.GetCurrentProcess().PrivateMemorySize64 / 1024 / 1024} MB RAM");
         }
 
-        public static void WriteJsonOutput<T>(T output) where T : OutputBase
+        public static void WriteJsonOutput(LdapWrapper output) //TODO: update this call.
         {
-            switch (output)
-            {
-                case Domain domain:
-                    _domainOutput.Value.WriteObject(output);
-                    break;
-                case GPO gpo:
-                    _gpoOutput.Value.WriteObject(gpo);
-                    break;
-                case Group group:
-                    _groupOutput.Value.WriteObject(group);
-                    break;
-                case OU ou:
-                    _ouOutput.Value.WriteObject(ou);
-                    break;
-                case User user:
-                    _userOutput.Value.WriteObject(user);
-                    break;
-            }
+            throw new NotImplementedException("Update LDAP wrapper call");
+            // switch (output)
+            // {
+            //     case Domain domain:
+            //         _domainOutput.Value.WriteObject(output);
+            //         break;
+            //     case GPO gpo:
+            //         _gpoOutput.Value.WriteObject(gpo);
+            //         break;
+            //     case Group group:
+            //         _groupOutput.Value.WriteObject(group);
+            //         break;
+            //     case OU ou:
+            //         _ouOutput.Value.WriteObject(ou);
+            //         break;
+            //     case User user:
+            //         _userOutput.Value.WriteObject(user);
+            //         break;
+            // }
 
             _currentCount++;
         }
@@ -99,19 +109,14 @@ namespace SharpHound.Core.Behavior
                 await _computerStatusTask;
             }
 
-            var domainName = ClientHelpers.NormalizeDomainName(context.DomainName);
+            var domainName = ClientHelpers.NormalizeDomainName(context, context.DomainName);
             var forestName = ClientHelpers.GetForestName(domainName).ToUpper();
             var dcSids = BaseProducer.GetDomainControllers();
             var domainSid = new SecurityIdentifier(dcSids.First().Key).AccountDomainSid.Value.ToUpper();
-            var enterpriseDomainControllers = new Group(null)
+            var enterpriseDomainControllers = new Group()
             {
                 ObjectIdentifier = $"{forestName}-S-1-5-9",
-                Domain = forestName,
-                Members = BaseProducer.GetDomainControllers().Keys.Select(sid => new GenericMember
-                {
-                    MemberId = sid,
-                    MemberType = Label.Computer
-                }).ToArray()
+                Members = BaseProducer.GetDomainControllers().Keys.Select(sid => new TypedPrincipal(sid, Label.Computer)).ToArray()
             };
 
             enterpriseDomainControllers.Properties.Add("name", $"ENTERPRISE DOMAIN CONTROLLERS@{forestName}");
@@ -121,22 +126,13 @@ namespace SharpHound.Core.Behavior
 
             var members = new[]
             {
-                new GenericMember
-                {
-                    MemberType = Label.Group,
-                    MemberId = $"{domainSid}-515"
-                },
-                new GenericMember
-                {
-                    MemberType = Label.Group,
-                    MemberId = $"{domainSid}-513"
-                }
+                new TypedPrincipal($"{domainSid}-515", Label.Group),
+                new TypedPrincipal($"{domainSid}-513", Label.Group),
             };
 
-            var everyone = new Group(null)
+            var everyone = new Group()
             {
                 ObjectIdentifier = $"{domainName}-S-1-1-0",
-                Domain = domainName,
                 Members = members
             };
 
@@ -145,10 +141,9 @@ namespace SharpHound.Core.Behavior
 
             _groupOutput.Value.WriteObject(everyone);
 
-            var authUsers = new Group(null)
+            var authUsers = new Group()
             {
                 ObjectIdentifier = $"{domainName}-S-1-5-11",
-                Domain = domainName,
                 Members = members
             };
 
@@ -163,15 +158,14 @@ namespace SharpHound.Core.Behavior
                 var domain = seen.Key;
                 var sid = seen.Value;
 
-                WellKnownPrincipal.GetWellKnownPrincipal(sid, out var principal);
+                context.LDAPUtils.GetWellKnownPrincipal(sid, domain, out var principal);
 
-                sid = ConvertCommonSid(sid, domain);
                 switch (principal.ObjectType)
                 {
                     case Label.User:
                         var u = new User()
                         {
-                            ObjectIdentifier = sid
+                            ObjectIdentifier = principal.ObjectIdentifier
                         };
                         u.Properties.Add("name", $"{principal.ObjectIdentifier}@{domain}".ToUpper());
                         u.Properties.Add("domain", domain);
@@ -449,7 +443,7 @@ namespace SharpHound.Core.Behavior
                 JsonWriter.Close();
             }
 
-            public void WriteObject(LdapWrapper json)
+            public void WriteObject<T>(T json)
             {
                 Serializer.Serialize(JsonWriter, json);
                 Count++;
