@@ -1,10 +1,8 @@
 ---
-owern: SpecterOps
-project: SharpHound Open Source Client
-version: *.*
+owern: SpecterOps project: SharpHound Open Source Client version: *.*
 ---
 
-# SharpHound 
+# SharpHound
 
 ```csharp
 dotnet restore .

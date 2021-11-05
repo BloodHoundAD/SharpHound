@@ -1,112 +1,123 @@
+using System.Collections.Generic;
+using System.Threading.Channels;
+using System.Threading.Tasks;
 using SharpHound.Core.Behavior;
 using SharpHoundCommonLib;
-using System;
-using System.Collections.Generic;
-using System.DirectoryServices;
-using System.DirectoryServices.Protocols;
-using System.Threading.Tasks;
-using System.Threading.Tasks.Dataflow;
+using SharpHoundCommonLib.Enums;
+using SharpHoundCommonLib.LDAPQueries;
 
 namespace SharpHound.Producers
 {
     /// <summary>
-    /// Base class for producing LDAP data to feed to other parts of the program
+    ///     Base class for producing LDAP data to feed to other parts of the program
     /// </summary>
     public abstract class BaseProducer
     {
-        protected static Dictionary<string, ISearchResultEntry> DomainControllerSids;
-        protected readonly DirectorySearcher Searcher;
-        protected readonly string Query;
-        protected readonly IEnumerable<ISearchResultEntry> Props;
-        protected readonly string DomainName;
+        protected readonly Context _context;
+        protected readonly Channel<ISearchResultEntry> _channel;
 
-        protected BaseProducer(Context context, string domainName, string query, IEnumerable<ISearchResultEntry> props)
+        protected BaseProducer(Context context, Channel<ISearchResultEntry> channel)
         {
-            //Create a Directory Searcher using the domain specified
-            Searcher = ClientHelpers.GetDirectorySearcher(context);
-            Query = query;
-            Props = props;
-            DomainName = domainName;
-            SetDomainControllerSids(GetDomainControllerSids(context));
+            _context = context;
+            _channel = channel;
         }
 
         /// <summary>
-        /// Sets the dictionary of Domain Controller sids, and merges in new ones
+        ///     Produces SearchResultEntry items from LDAP and pushes them to a queue.
         /// </summary>
-        /// <param name="dcs"></param>
-        public static void SetDomainControllerSids(Dictionary<string, ISearchResultEntry> dcs)
+        /// <param name="queue"></param>
+        /// <returns></returns>
+        public abstract Task Produce();
+
+        protected (LDAPFilter, IEnumerable<string>) CreateLDAPData()
         {
-            if (DomainControllerSids == null)
+            var query = new LDAPFilter();
+            var props = new List<string>();
+            props.AddRange(CommonProperties.BaseQueryProps);
+            props.AddRange(CommonProperties.TypeResolutionProps);
+            
+            var methods = _context.ResolvedCollectionMethods;
+
+            if ((methods & ResolvedCollectionMethod.ObjectProps) != 0 || (methods & ResolvedCollectionMethod.ACL) != 0)
             {
-                DomainControllerSids = dcs;
+                query = query.AddComputers().AddContainers().AddUsers().AddGroups().AddDomains().AddOUs().AddGPOs();
+                props.AddRange(CommonProperties.ObjectPropsProps);
+
+                if ((methods & ResolvedCollectionMethod.Container) != 0)
+                {
+                    props.AddRange(CommonProperties.ContainerProps);
+                }
+
+                if ((methods & ResolvedCollectionMethod.Group) != 0)
+                {
+                    props.AddRange(CommonProperties.GroupResolutionProps);
+                }
+
+                if ((methods & ResolvedCollectionMethod.ACL) != 0)
+                {
+                    props.AddRange(CommonProperties.ACLProps);
+                }
+                
+                if ((methods & ResolvedCollectionMethod.LocalAdmin) != 0 ||
+                    (methods & ResolvedCollectionMethod.DCOM) != 0 || (methods & ResolvedCollectionMethod.PSRemote) != 0 ||
+                    (methods & ResolvedCollectionMethod.RDP) != 0 || (methods & ResolvedCollectionMethod.LoggedOn) != 0 ||
+                    (methods & ResolvedCollectionMethod.Session) != 0 || (methods & ResolvedCollectionMethod.ObjectProps) != 0)
+                {
+                    props.AddRange(CommonProperties.ComputerMethodProps);
+                }
+
+                if ((methods & ResolvedCollectionMethod.Trusts) != 0)
+                {
+                    props.AddRange(CommonProperties.DomainTrustProps);
+                }
+
+                if ((methods & ResolvedCollectionMethod.GPOLocalGroup) != 0)
+                {
+                    props.AddRange(CommonProperties.GPOLocalGroupProps);
+                }
+
+                if ((methods & ResolvedCollectionMethod.SPNTargets) != 0)
+                {
+                    props.AddRange(CommonProperties.SPNTargetProps);
+                }
             }
             else
             {
-                foreach (var target in dcs)
+                if ((methods & ResolvedCollectionMethod.Container) != 0)
                 {
-                    try
-                    {
-                        DomainControllerSids.Add(target.Key, target.Value);
-                    }
-                    catch
-                    {
-                    }
+                    query = query.AddContainers();
+                    props.AddRange(CommonProperties.ContainerProps);
+                }
+
+                if ((methods & ResolvedCollectionMethod.Group) != 0)
+                {
+                    query = query.AddGroups();
+                    props.AddRange(CommonProperties.GroupResolutionProps);
+                }
+
+                if ((methods & ResolvedCollectionMethod.LocalAdmin) != 0 ||
+                    (methods & ResolvedCollectionMethod.DCOM) != 0 || (methods & ResolvedCollectionMethod.PSRemote) != 0 ||
+                    (methods & ResolvedCollectionMethod.RDP) != 0 || (methods & ResolvedCollectionMethod.LoggedOn) != 0 ||
+                    (methods & ResolvedCollectionMethod.Session) != 0 || (methods & ResolvedCollectionMethod.ObjectProps) != 0)
+                {
+                    query = query.AddComputers();
+                    props.AddRange(CommonProperties.ComputerMethodProps);
+                }
+
+                if ((methods & ResolvedCollectionMethod.Trusts) != 0)
+                {
+                    query = query.AddDomains();
+                    props.AddRange(CommonProperties.DomainTrustProps);
+                }
+
+                if ((methods & ResolvedCollectionMethod.SPNTargets) != 0)
+                {
+                    query = query.AddUsers(CommonFilters.NeedsSPN);
+                    props.AddRange(CommonProperties.SPNTargetProps);
                 }
             }
+
+            return (query, props);
         }
-
-        /// <summary>
-        /// Checks if a SID is in the domain controllers list
-        /// </summary>
-        /// <param name="sid"></param>
-        /// <returns></returns>
-        public static bool IsSidDomainController(string sid)
-        {
-            return DomainControllerSids.ContainsKey(sid);
-        }
-
-        /// <summary>
-        /// Gets the dictionary of Domain Controller sids
-        /// </summary>
-        /// <returns></returns>
-        public static Dictionary<string, ISearchResultEntry> GetDomainControllers()
-        {
-            return DomainControllerSids;
-        }
-
-        /// <summary>
-        /// Starts the producer. 
-        /// </summary>
-        /// <param name="queue"></param>
-        /// <returns></returns>
-        public Task StartProducer(Context context, ITargetBlock<ISearchResultEntry> queue)
-        {
-            return Task.Run(async () => { await ProduceLdap(context, queue); });
-        }
-
-        /// <summary>
-        /// Populates the list of domain controller SIDs using LDAP
-        /// </summary>
-        /// <returns></returns>
-        protected Dictionary<string, ISearchResultEntry> GetDomainControllerSids(Context context)
-        {
-            Console.WriteLine("[+] Pre-populating Domain Controller SIDS");
-            var temp = new Dictionary<string, ISearchResultEntry>();
-            foreach (var entry in context.LDAPUtils.QueryLDAP  (context.LdapFilter, System.DirectoryServices.Protocols.SearchScope.Subtree, new[] { "objectsid", "samaccountname" }))
-            {
-                var sid = entry.GetSid();
-                if (sid != null)
-                    temp.Add(sid, entry);
-            }
-
-            return temp;
-        }
-
-        /// <summary>
-        /// Produces SearchResultEntry items from LDAP and pushes them to a queue.
-        /// </summary>
-        /// <param name="queue"></param>
-        /// <returns></returns>
-        protected abstract Task ProduceLdap(Context context, ITargetBlock<ISearchResultEntry> queue);
     }
 }

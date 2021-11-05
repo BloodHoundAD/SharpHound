@@ -12,27 +12,25 @@ namespace SharpHound.Core.Behavior
     public static class LDAPConsumer
     {
         internal static async Task ConsumeSearchResults(Channel<ISearchResultEntry> inputChannel,
-            Channel<OutputBase> outputChannel, Context context,
-            ILogger log, ILDAPUtils utils)
+            Channel<CSVComputerStatus> computerStatusChannel, Channel<OutputBase> outputChannel, Context context)
         {
-            var processor = new ObjectProcessors(utils, log);
+            var log = context.Logger;
+            var processor = new ObjectProcessors(context, log);
             var watch = new Stopwatch();
             var threadId = Thread.CurrentThread.ManagedThreadId;
 
             while (await inputChannel.Reader.WaitToReadAsync())
-            {
                 if (inputChannel.Reader.TryRead(out var item))
-                {                    
                     try
                     {
                         var res = await item.ResolveBloodHoundInfo();
-                        
+
                         if (res == null)
                             continue;
 
-                        log.LogTrace("Consumer {ThreadID} is processing {obj}", threadId, res.DisplayName);
+                        log.LogTrace("Consumer {ThreadID} started processing {obj}", threadId, res.DisplayName);
                         watch.Start();
-                        var processed = await processor.ProcessObject(context, item, res);
+                        var processed = await processor.ProcessObject(item, res, computerStatusChannel);
                         watch.Stop();
                         log.LogTrace("Consumer {ThreadID} took {time} ms to process {obj}", threadId,
                             watch.Elapsed.TotalMilliseconds, res.DisplayName);
@@ -44,8 +42,6 @@ namespace SharpHound.Core.Behavior
                     {
                         log.LogError(e, "error in consumer");
                     }
-                }
-            }
 
             log.LogInformation("Consumer task on thread {id} completed", Thread.CurrentThread.ManagedThreadId);
         }

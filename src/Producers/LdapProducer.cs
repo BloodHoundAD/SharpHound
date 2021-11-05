@@ -1,40 +1,41 @@
-﻿using SharpHound.Core.Behavior;
-using SharpHoundCommonLib;
-using System;
-using System.Collections.Generic;
-using System.DirectoryServices.Protocols;
+﻿using System.DirectoryServices.Protocols;
+using System.Linq;
+using System.Threading.Channels;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Dataflow;
+using SharpHound.Core.Behavior;
+using SharpHoundCommonLib;
 
 namespace SharpHound.Producers
 {
     public class LdapProducer : BaseProducer
     {
-        public LdapProducer(Context context, string domainName, string query, IEnumerable<ISearchResultEntry> props) : base(context, domainName, query, props)
+        public LdapProducer(Context context, Channel<ISearchResultEntry> channel) : base(context, channel)
         {
         }
 
         /// <summary>
-        /// Uses the LDAP filter and properties specified to grab data from LDAP, and push it to the queue.
+        ///     Uses the LDAP filter and properties specified to grab data from LDAP, and push it to the queue.
         /// </summary>
         /// <param name="queue"></param>
         /// <returns></returns>
-        protected override async Task ProduceLdap(Context context, ITargetBlock<ISearchResultEntry> queue)
+        public override async Task Produce()
         {
-            var token = context.CancellationTokenSource.Token;
-            OutputTasks.StartOutputTimer(context);
+            var cancellationToken = _context.CancellationTokenSource.Token;
+
+            var (query, props) = CreateLDAPData();
+
             //Do a basic  LDAP search and grab results
-            foreach (var searchResult in context.LDAPUtils.QueryLDAP( Query, SearchScope.Subtree, Props, context.SearchBase))
+            foreach (var searchResult in _context.LDAPUtils.QueryLDAP(query.GetFilter(), SearchScope.Subtree,
+                props.Distinct().ToArray(), cancellationToken, _context.DomainName, adsPath: _context.SearchBase))
             {
-                //If our cancellation token is set, cancel out of our loop
-                if (token.IsCancellationRequested)
-                {
-                    Console.WriteLine("[-] Terminating Producer as cancellation was requested. Waiting for pipeline to finish");
-                    break;
-                }
-                await queue.SendAsync(searchResult);
+                var l = searchResult.DistinguishedName.ToLower();
+                if (l.Contains("cn=domainupdates,cn=system"))
+                    continue;
+                if (l.Contains("cn=policies,cn=system") && (l.StartsWith("cn=user") || l.StartsWith("cn=machine")))
+                    continue;
+                
+                await _channel.Writer.WriteAsync(searchResult, cancellationToken);
             }
-            queue.Complete();
         }
     }
 }

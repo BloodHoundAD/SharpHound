@@ -1,95 +1,82 @@
-﻿using SharpHound.Core.Behavior;
-using SharpHoundCommonLib;
-using System;
+﻿using System;
 using System.DirectoryServices.Protocols;
-using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Threading.Channels;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Dataflow;
+using SharpHound.Core.Behavior;
+using SharpHoundCommonLib;
 
 namespace SharpHound.Producers
 {
     /// <summary>
-    /// Substitute producer for the ComputerFile option
+    ///     Substitute producer for the ComputerFile option
     /// </summary>
     internal class ComputerFileProducer : BaseProducer
     {
-
-        public ComputerFileProducer(Context context, string domainName, string query, IEnumerable<ISearchResultEntry> props) : base(context, domainName, query, props)
-        {
-        }
-
         /// <summary>
-        /// Grabs computers names from the text file specified in the options, and attempts to resolve them to LDAP objects.
-        /// Pushes the corresponding LDAP objects to the queue.
+        ///     Grabs computers names from the text file specified in the options, and attempts to resolve them to LDAP objects.
+        ///     Pushes the corresponding LDAP objects to the queue.
         /// </summary>
         /// <param name="queue"></param>
         /// <returns></returns>
-        protected override async Task ProduceLdap(Context context, ITargetBlock<ISearchResultEntry> queue)
+        public override async Task Produce()
         {
-            var computerFile = context.ComputerFile;
-            var token = context.CancellationTokenSource.Token;
-            OutputTasks.StartOutputTimer(context);
+            var computerFile = _context.ComputerFile;
+            var cancellationToken = _context.CancellationTokenSource.Token;
+
+            var (query, props) = CreateLDAPData();
+            props = props.ToArray();
 
             try
             {
                 //Open the file for reading
-                using (var fileStream = new StreamReader(new FileStream(computerFile, FileMode.Open, FileAccess.Read)))
+                using var fileStream = new StreamReader(new FileStream(computerFile, FileMode.Open, FileAccess.Read));
+                string computer;
+                // Loop over each line in the file
+                while ((computer = await fileStream.ReadLineAsync()) != null)
                 {
-                    string computer;
-                    // Loop over each line in the file
-                    while ((computer = fileStream.ReadLine()) != null)
+                    //If the cancellation token is set, cancel enumeration
+                    if (cancellationToken.IsCancellationRequested) break;
+
+                    string sid;
+                    if (!computer.StartsWith("S-1-5-21"))
+                        //The computer isn't a SID so try to convert it to one
+                        sid = await _context.LDAPUtils.ResolveHostToSid(computer, _context.DomainName);
+                    else
+                        //The computer is already a sid, so just store it off
+                        sid = computer;
+
+                    try
                     {
-                        //If the cancellation token is set, cancel enumeration
-                        if (token.IsCancellationRequested)
+                        //Convert the sid to a hex representation and find the entry in the domain
+                        var hexSid = Helpers.ConvertSidToHexSid(sid);
+                        var entry = _context.LDAPUtils.QueryLDAP($"(objectsid={hexSid})", SearchScope.Subtree,
+                            props.ToArray(), cancellationToken, _context.DomainName, adsPath:_context.SearchBase).DefaultIfEmpty(null).FirstOrDefault();
+                        if (entry == null)
                         {
-                            break;
-                        }
-
-                        string sid;
-                        if (!computer.StartsWith("S-1-5-21"))
-                        {
-                            //The computer isn't a SID so try to convert it to one
-                            sid = await context.LDAPUtils.ResolveHostToSid(computer, DomainName);
-                        }
-                        else
-                        {
-                            //The computer is already a sid, so just store it off
-                            sid = computer;
-                        }
-
-                        try
-                        {
-                            //Convert the sid to a hex representation and find the entry in the domain
-                            var hexSid =  Helpers.ConvertSidToHexSid(sid);
-                            var entry = context.LDAPUtils.QueryLDAP($"(objectsid={hexSid})", SearchScope.Subtree, Props); //TODO Update call
-                            if (entry == null)
-                            {
-                                //We couldn't find the entry for whatever reason
-                                Console.WriteLine($"Failed to resolve {computer}");
-                                continue;
-                            }
-
-                            //Success! Send the computer to be processed
-                            await queue.SendAsync(entry.GetEnumerator().Current); // TODO: not very safe
-                        }
-                        catch
-                        {
+                            //We couldn't find the entry for whatever reason
                             Console.WriteLine($"Failed to resolve {computer}");
+                            continue;
                         }
+
+                        //Success! Send the computer to be processed
+                        await _channel.Writer.WriteAsync(entry, cancellationToken);
+                    }
+                    catch
+                    {
+                        Console.WriteLine($"Failed to resolve {computer}");
                     }
                 }
             }
-            catch
+            catch (Exception e)
             {
-                Console.WriteLine($"Error in opening file {computerFile}");
-            }
-            finally
-            {
-                queue.Complete();
+                Console.WriteLine($"Error opening ComputerFile: {e}");
             }
         }
 
-
+        public ComputerFileProducer(Context context, Channel<ISearchResultEntry> channel) : base(context, channel)
+        {
+        }
     }
 }
