@@ -1,15 +1,15 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace SharpHound.Writers
+namespace Sharphound.Writers
 {
     public abstract class BaseWriter<T>
     {
         protected readonly string DataType;
         protected readonly List<T> Queue;
-        protected int Count;
         private bool _fileCreated;
-        protected bool _noOp;
+        protected int Count;
+        protected bool NoOp;
 
         internal BaseWriter(string dataType)
         {
@@ -19,7 +19,7 @@ namespace SharpHound.Writers
 
         internal async Task AcceptObject(T item)
         {
-            if (_noOp)
+            if (NoOp)
                 return;
             if (!_fileCreated)
             {
@@ -35,7 +35,7 @@ namespace SharpHound.Writers
                 Queue.Clear();
             }
         }
-        
+
         protected abstract Task WriteData();
 
         internal abstract Task FlushWriter();

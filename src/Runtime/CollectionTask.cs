@@ -1,30 +1,29 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using SharpHound.Core.Behavior;
-using SharpHound.Producers;
-using SharpHound.Writers;
+using Sharphound.Client;
+using Sharphound.Producers;
+using Sharphound.Writers;
 using SharpHoundCommonLib;
 using SharpHoundCommonLib.OutputTypes;
 
-namespace SharpHound
+namespace Sharphound.Runtime
 {
     public class CollectionTask
     {
-        private readonly Context _context;
         private readonly Channel<CSVComputerStatus> _compStatusChannel;
+        private readonly CompStatusWriter _compStatusWriter;
+        private readonly IContext _context;
         private readonly Channel<ISearchResultEntry> _ldapChannel;
+        private readonly ILogger _log;
         private readonly Channel<OutputBase> _outputChannel;
 
         private readonly OutputWriter _outputWriter;
-        private readonly CompStatusWriter _compStatusWriter;
         private readonly BaseProducer _producer;
         private readonly List<Task> _taskPool = new();
-        private readonly ILogger _log;
 
-        public CollectionTask(Context context)
+        public CollectionTask(IContext context)
         {
             _context = context;
             _log = context.Logger;
@@ -37,33 +36,24 @@ namespace SharpHound
             _compStatusChannel = Channel.CreateUnbounded<CSVComputerStatus>(new UnboundedChannelOptions
             {
                 SingleReader = true,
-                SingleWriter = false,
+                SingleWriter = false
             });
-            if (context.Flags.DumpComputerStatus)
-            {
-                _compStatusWriter = new CompStatusWriter(context, _compStatusChannel);
-            }
-                
+            if (context.Flags.DumpComputerStatus) _compStatusWriter = new CompStatusWriter(context, _compStatusChannel);
+
             _outputChannel = Channel.CreateUnbounded<OutputBase>(new UnboundedChannelOptions
             {
                 SingleReader = true,
-                SingleWriter = false,
+                SingleWriter = false
             });
 
             _outputWriter = new OutputWriter(context, _outputChannel);
 
             if (context.Flags.Stealth)
-            {
                 _producer = new StealthProducer(context, _ldapChannel);
-            }
             else if (context.ComputerFile != null)
-            {
                 _producer = new ComputerFileProducer(context, _ldapChannel);
-            }
             else
-            {
                 _producer = new LdapProducer(context, _ldapChannel);
-            }
         }
 
         internal async Task StartCollection()
@@ -74,7 +64,7 @@ namespace SharpHound
                     _context, i);
                 _taskPool.Add(consumer);
             }
-            
+
             var outputTask = _outputWriter.StartWriter();
             _outputWriter.StartStatusOutput();
             var compStatusTask = _compStatusWriter?.StartWriter();
@@ -90,7 +80,7 @@ namespace SharpHound
 
             await foreach (var wkp in _context.LDAPUtils.GetWellKnownPrincipalOutput())
                 await _outputChannel.Writer.WriteAsync(wkp);
-            
+
             _outputChannel.Writer.Complete();
             _compStatusChannel?.Writer.Complete();
             _log.LogInformation("Output channel closed, waiting for output task to complete");

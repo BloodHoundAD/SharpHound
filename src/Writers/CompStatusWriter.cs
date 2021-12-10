@@ -4,27 +4,24 @@ using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using SharpHound.Core.Behavior;
+using Sharphound.Client;
 using SharpHoundCommonLib;
 
-namespace SharpHound.Writers
+namespace Sharphound.Writers
 {
     internal class CompStatusWriter : BaseWriter<CSVComputerStatus>
     {
         private static readonly object LockObj = new();
         private readonly Channel<CSVComputerStatus> _channel;
-        private readonly Context _context;
+        private readonly IContext _context;
         private StreamWriter _streamWriter;
 
-        public CompStatusWriter(Context context, Channel<CSVComputerStatus> channel) : base("compstatus")
+        public CompStatusWriter(IContext context, Channel<CSVComputerStatus> channel) : base("compstatus")
         {
             _context = context;
             _channel = channel;
             _channel = channel;
-            if (!_context.Flags.DumpComputerStatus)
-            {
-                _noOp = true;
-            }
+            if (!_context.Flags.DumpComputerStatus) NoOp = true;
         }
 
         protected override async Task WriteData()

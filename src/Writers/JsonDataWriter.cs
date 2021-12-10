@@ -1,40 +1,39 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using SharpHound.Core.Behavior;
+using Sharphound.Client;
 using SharpHoundCommonLib.OutputTypes;
-using JsonSerializer = Utf8Json.JsonSerializer;
+using Utf8Json;
 
-namespace SharpHound.Writers
+namespace Sharphound.Writers
 {
     /// <summary>
-    /// An implementation of BaseWriter which writes data directly to JSON
+    ///     An implementation of BaseWriter which writes data directly to JSON
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public class JsonDataWriter<T> : BaseWriter<T>
     {
         private const string FileStart = @"{""data"":[";
-        private StreamWriter _streamWriter;
+        private readonly IContext _context;
+        private string _fileName;
         private bool _initialWrite = true;
-        private readonly Context _context;
-        private string _fileName = null;
+        private StreamWriter _streamWriter;
 
         /// <summary>
-        /// Creates a new instance of a JSONWriter using the specified datatype and program context
+        ///     Creates a new instance of a JSONWriter using the specified datatype and program context
         /// </summary>
         /// <param name="context"></param>
         /// <param name="dataType"></param>
-        public JsonDataWriter(Context context, string dataType) : base(dataType)
+        public JsonDataWriter(IContext context, string dataType) : base(dataType)
         {
             _context = context;
             if (_context.Flags.NoOutput)
-                _noOp = true;
+                NoOp = true;
         }
 
         /// <summary>
-        /// Opens a new file handle for writing. Throws an exception if the file already exists.
+        ///     Opens a new file handle for writing. Throws an exception if the file already exists.
         /// </summary>
         /// <exception cref="FileExistsException"></exception>
         protected override void CreateFile()
@@ -50,7 +49,7 @@ namespace SharpHound.Writers
         }
 
         /// <summary>
-        /// Flushes data to the file by serializing to JSON and then writing with appropriate seperators
+        ///     Flushes data to the file by serializing to JSON and then writing with appropriate seperators
         /// </summary>
         protected override async Task WriteData()
         {
@@ -64,7 +63,7 @@ namespace SharpHound.Writers
         }
 
         /// <summary>
-        /// Flushes remaining data to the file and then manually writes JSON tags to close the file out
+        ///     Flushes remaining data to the file and then manually writes JSON tags to close the file out
         /// </summary>
         internal override async Task FlushWriter()
         {
@@ -91,7 +90,7 @@ namespace SharpHound.Writers
         }
 
         /// <summary>
-        /// Get the file name used by this writer
+        ///     Get the file name used by this writer
         /// </summary>
         /// <returns></returns>
         internal string GetFilename()

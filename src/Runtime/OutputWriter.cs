@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -10,33 +9,31 @@ using System.Timers;
 using ICSharpCode.SharpZipLib.Core;
 using ICSharpCode.SharpZipLib.Zip;
 using Microsoft.Extensions.Logging;
-using SharpHound.Core.Behavior;
-using SharpHound.Writers;
-using SharpHoundCommonLib;
+using Sharphound.Client;
+using Sharphound.Writers;
 using SharpHoundCommonLib.Enums;
 using SharpHoundCommonLib.OutputTypes;
-using Utf8Json;
 
-namespace SharpHound
+namespace Sharphound.Runtime
 {
     public class OutputWriter
     {
-        private readonly Context _context;
-        private readonly Channel<OutputBase> _outputChannel;
-        private readonly JsonDataWriter<User> _userOutput;
         private readonly JsonDataWriter<Computer> _computerOutput;
-        private readonly JsonDataWriter<Domain> _domainOutput;
-        private readonly JsonDataWriter<Group> _groupOutput;
-        private readonly JsonDataWriter<GPO> _gpoOutput;
-        private readonly JsonDataWriter<OU> _ouOutput;
         private readonly JsonDataWriter<Container> _containerOutput;
+        private readonly IContext _context;
+        private readonly JsonDataWriter<Domain> _domainOutput;
+        private readonly JsonDataWriter<GPO> _gpoOutput;
+        private readonly JsonDataWriter<Group> _groupOutput;
+        private readonly JsonDataWriter<OU> _ouOutput;
+        private readonly Channel<OutputBase> _outputChannel;
+        private readonly Timer _statusTimer;
+        private readonly JsonDataWriter<User> _userOutput;
 
         private int _completedCount;
         private int _lastCount;
         private Stopwatch _runTimer;
-        private readonly Timer _statusTimer;
 
-        public OutputWriter(Context context, Channel<OutputBase> outputChannel)
+        public OutputWriter(IContext context, Channel<OutputBase> outputChannel)
         {
             _context = context;
             _outputChannel = outputChannel;
@@ -47,7 +44,7 @@ namespace SharpHound
             _gpoOutput = new JsonDataWriter<GPO>(_context, DataType.GPOs);
             _ouOutput = new JsonDataWriter<OU>(_context, DataType.OUs);
             _containerOutput = new JsonDataWriter<Container>(_context, DataType.Containers);
-            
+
             _runTimer = new Stopwatch();
             _statusTimer = new Timer(_context.StatusInterval);
             _statusTimer.Elapsed += (_, _) =>
@@ -74,19 +71,15 @@ namespace SharpHound
         {
             var log = _context.Logger;
             if (_runTimer != null)
-            {
                 log.LogInformation(
                     "Status: {Completed} objects finished (+{ElapsedObjects} {ObjectsPerSecond})/s -- Using {RAM} MB RAM",
                     _completedCount, _completedCount - _lastCount,
                     (float)_completedCount / (_runTimer.ElapsedMilliseconds / 1000),
                     Process.GetCurrentProcess().PrivateMemorySize64 / 1024 / 1024);
-            }
             else
-            {
                 log.LogInformation("Status: {Completed} objects finished (+{ElapsedObjects}) -- Using {RAM} MB RAM",
                     _completedCount, _completedCount - _lastCount,
                     Process.GetCurrentProcess().PrivateMemorySize64 / 1024 / 1024);
-            }
         }
 
         internal async Task StartWriter()
@@ -144,24 +137,19 @@ namespace SharpHound
         {
             if (_context.Flags.NoZip || _context.Flags.NoOutput)
                 return;
-            
+
             var filename = string.IsNullOrEmpty(_context.ZipFilename) ? "BloodHound" : _context.ZipFilename;
             var resolvedFileName = _context.ResolveFileName(filename, "zip", true);
 
             if (File.Exists(resolvedFileName))
-            {
                 resolvedFileName = _context.ResolveFileName(Path.GetRandomFileName(), "zip", true);
-            }
 
             using var fs = File.Create(resolvedFileName);
             using var zipStream = new ZipOutputStream(fs);
             zipStream.SetLevel(9);
-                
-            if (_context.ZipPassword != null)
-            {
-                zipStream.Password = _context.ZipPassword;
-            }
-            
+
+            if (_context.ZipPassword != null) zipStream.Password = _context.ZipPassword;
+
             var fileList = new List<string>();
             fileList.AddRange(new[]
             {
@@ -169,21 +157,21 @@ namespace SharpHound
                 _containerOutput.GetFilename(), _domainOutput.GetFilename(), _gpoOutput.GetFilename(),
                 _ouOutput.GetFilename()
             });
-                
+
             foreach (var entry in fileList.Where(x => !string.IsNullOrEmpty(x)))
             {
                 var fi = new FileInfo(entry);
-                var zipEntry = new ZipEntry(fi.Name) { DateTime = fi.LastWriteTime, Size = fi.Length};
+                var zipEntry = new ZipEntry(fi.Name) { DateTime = fi.LastWriteTime, Size = fi.Length };
                 zipStream.PutNextEntry(zipEntry);
-                
+
                 var buffer = new byte[4096];
                 using (var fileStream = File.OpenRead(entry))
                 {
                     StreamUtils.Copy(fileStream, zipStream, buffer);
                 }
-                    
+
                 zipStream.CloseEntry();
-                
+
                 File.Delete(entry);
             }
         }

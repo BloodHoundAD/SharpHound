@@ -4,13 +4,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using SharpHound.Enums;
 using SharpHoundCommonLib;
 using SharpHoundCommonLib.Enums;
-using SharpHoundCommonLib.LDAPQueries;
 using Timer = System.Timers.Timer;
 
-namespace SharpHound.Core.Behavior
+namespace Sharphound.Client
 {
     internal class FileExistsException : Exception
     {
@@ -28,7 +26,7 @@ namespace SharpHound.Core.Behavior
         }
     }
 
-    public interface Context
+    public interface IContext
     {
         Flags Flags { get; set; }
         string LdapFilter { get; set; }
@@ -67,6 +65,7 @@ namespace SharpHound.Core.Behavior
         /// </summary>
         /// <returns></returns>
         Task DoDelay();
+
         string GetCachePath();
         ResolvedCollectionMethod SetupMethodsForLoop();
         string ResolveFileName(string filename, string extension, bool addTimestamp);

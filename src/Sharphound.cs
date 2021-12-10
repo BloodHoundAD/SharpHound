@@ -15,41 +15,35 @@
 // ---------------------------------------------------- //
 
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.DirectoryServices;
+using System.DirectoryServices.Protocols;
 using System.IO;
 using System.Linq;
 using System.Security.Principal;
-using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using CommandLine;
 using Microsoft.Extensions.Logging;
-using SharpHound.Core;
-using SharpHound.Core.Behavior;
-using SharpHound.Enums;
+using Sharphound.Client;
+using Sharphound.Runtime;
 using SharpHoundCommonLib;
-using SharpHoundCommonLib.Enums;
-using SharpHoundCommonLib.LDAPQueries;
-using SharpHoundCommonLib.Processors;
 using Utf8Json;
 using Utf8Json.Resolvers;
-using SearchScope = System.DirectoryServices.Protocols.SearchScope;
-using Timer = System.Timers.Timer;
 
-namespace SharpHound
+namespace Sharphound
 {
     #region Reference Implementations
 
     internal class BasicLogger : ILogger
     {
         private readonly int _verbosity;
+
         public BasicLogger(int verbosity)
         {
             _verbosity = verbosity;
         }
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception,
+            Func<TState, Exception, string> formatter)
         {
             WriteLevel(logLevel, state.ToString(), exception);
         }
@@ -63,13 +57,13 @@ namespace SharpHound
         {
             return null;
         }
-        
+
         private void WriteLevel(LogLevel level, string message, Exception e = null)
         {
             if (IsEnabled(level))
                 Console.WriteLine(FormatLog(level, message, e));
         }
-        
+
         private static string FormatLog(LogLevel level, string message, Exception e)
         {
             var time = DateTime.Now;
@@ -77,164 +71,21 @@ namespace SharpHound
         }
     }
 
-    /// <summary>
-    ///     Console Context holds the various properties to be populated/validated by the chain of responsibility.
-    /// </summary>
-    public class BaseContext : IDisposable, Context
-    {
-        private static string _currentLoopTime = $"{DateTime.Now:yyyyMMddHHmmss}";
-        private static readonly Lazy<Random> RandomGen = new();
-
-        private bool disposedValue;
-
-        private BaseContext(LDAPConfig ldapConfig)
-        {
-            LDAPUtils = new LDAPUtils();
-            LDAPUtils.SetLDAPConfig(ldapConfig);
-            CancellationTokenSource = new CancellationTokenSource();
-        }
-
-        public BaseContext(ILogger logger, LDAPConfig ldapConfig, Flags flags)
-        {
-            Logger = logger;
-            Flags = flags;
-            LDAPUtils = new LDAPUtils();
-            LDAPUtils.SetLDAPConfig(ldapConfig);
-            CancellationTokenSource = new CancellationTokenSource();
-        }
-
-        public ResolvedCollectionMethod ResolvedCollectionMethods { get; set; }
-        public bool IsFaulted { get; set; }
-        public string LdapFilter { get; set; }
-        public string SearchBase { get; set; }
-        public string DomainName { get; set; }
-        public string CacheFileName { get; set; }
-        public string ComputerFile { get; set; }
-        public string ZipFilename { get; set; }
-        public string ZipPassword { get; set; }
-        public string CurrentUserName { get; set; }
-        public ILogger Logger { get; set; }
-        public Timer Timer { get; set; }
-        public DateTime LoopEnd { get; set; }
-        public TimeSpan? LoopDuration { get; set; }
-        public TimeSpan? LoopInterval { get; set; }
-
-        public int StatusInterval { get; set; }
-        public int Threads { get; set; }
-        public string RealDNSName { get; set; }
-        public string OutputPrefix { get; set; }
-        public string OutputDirectory { get; set; }
-        public int Throttle { get; set; }
-        public int Jitter { get; set; }
-
-        public int PortScanTimeout { get; set; } = 500;
-
-        public CancellationTokenSource CancellationTokenSource { get; set; }
-
-        public ILDAPUtils LDAPUtils { get; set; }
-
-        public Task CollectionTask { get; set; }
-        public Flags Flags { get; set; }
-
-        public async Task DoDelay()
-        {
-            if (Throttle == 0)
-                return;
-
-            if (Jitter == 0)
-            {
-                await Task.Delay(Throttle);
-                return;
-            }
-
-            var percent = (int)Math.Floor((double)(Jitter * (Throttle / 100)));
-            var delay = Throttle + RandomGen.Value.Next(-percent, percent);
-            await Task.Delay(delay);
-        }
-        
-        public string GetCachePath()
-        {
-            var cacheFileName = CacheFileName ?? $"{ClientHelpers.GetBase64MachineID()}.bin";
-            var path = Path.Combine(OutputDirectory, cacheFileName);
-            return path;
-        }
-
-        public ResolvedCollectionMethod SetupMethodsForLoop()
-        {
-            var original = ResolvedCollectionMethods;
-            const ResolvedCollectionMethod computerCollectionMethods = ResolvedCollectionMethod.LocalGroups | ResolvedCollectionMethod.LoggedOn |
-                                                                       ResolvedCollectionMethod.Session;
-            return original & computerCollectionMethods;
-        }
-
-        public string ResolveFileName(string filename, string extension, bool addTimestamp)
-        {
-            var finalFilename = filename;
-            if (!filename.EndsWith(extension))
-                finalFilename = $"{filename}.{extension}";
-
-            if (extension is "json" or "zip" && Flags.RandomizeFilenames)
-                finalFilename = $"{Path.GetRandomFileName()}";
-
-            if (addTimestamp) finalFilename = $"{_currentLoopTime}_{finalFilename}";
-
-            if (OutputPrefix != null) finalFilename = $"{OutputPrefix}_{finalFilename}";
-
-            var finalPath = Path.Combine(OutputDirectory, finalFilename);
-
-            return finalPath;
-        }
-
-        // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-        // ~Context()
-        // {
-        //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        //     Dispose(disposing: false);
-        // }
-
-        /// <summary>
-        ///     TODO: Implement the primary dispose pattern
-        /// </summary>
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        /// <summary>
-        ///     TODO: Implement the primary dispose pattern
-        /// </summary>
-        /// <param name="disposing"></param>
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    // TODO: dispose managed state (managed objects)
-                }
-
-                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-                // TODO: set large fields to null
-                disposedValue = true;
-            }
-        }
-    }
-
-    internal class SharpLinks : Links<Context>
+    internal class SharpLinks : Links<IContext>
     {
         /// <summary>
-        ///     // 1. INIT and check defaults
+        ///     Init and check defaults
         /// </summary>
-        /// <param name="printer"></param>
         /// <param name="context"></param>
-        public Context Initialize(Context context, LDAPConfig options)
+        /// <param name="options"></param>
+        /// <returns></returns>
+        public IContext Initialize(IContext context, LDAPConfig options)
         {
             //We've successfully parsed arguments, lets do some options post-processing.
             var currentTime = DateTime.Now;
             //var padString = new string('-', initString.Length);
-            context.Logger.LogInformation("Initializing SharpHound at {time} on {date}", currentTime.ToShortTimeString(), currentTime.ToShortDateString());
+            context.Logger.LogInformation("Initializing SharpHound at {time} on {date}",
+                currentTime.ToShortTimeString(), currentTime.ToShortDateString());
             // Check to make sure both LDAP options are set if either is set
 
             if (options.Password != null && options.Username == null ||
@@ -259,13 +110,14 @@ namespace SharpHound
 
             return context;
         }
-        
-        public Context TestConnection(Context context)
+
+        public IContext TestConnection(IContext context)
         {
             //2. TestConnection()
             // Initial LDAP connection test. Search for the well known administrator SID to make sure we can connect successfully.
             var result =
-                context.LDAPUtils.QueryLDAP("(objectclass=domain)", SearchScope.Subtree, new[] { "objectsid" }).DefaultIfEmpty(null).FirstOrDefault();
+                context.LDAPUtils.QueryLDAP("(objectclass=domain)", SearchScope.Subtree, new[] { "objectsid" })
+                    .DefaultIfEmpty(null).FirstOrDefault();
 
             // If we get nothing back from LDAP, something is wrong
             if (result == null)
@@ -282,27 +134,24 @@ namespace SharpHound
 
             return context;
         }
-        
-        public Context SetSessionUserName(string OverrideUserName, Context context)
+
+        public IContext SetSessionUserName(string overrideUserName, IContext context)
         {
             //3. SetSessionUserName()
             // Set the current user name for session collection.
-            context.CurrentUserName = OverrideUserName ?? WindowsIdentity.GetCurrent().Name.Split('\\')[1];
+            context.CurrentUserName = overrideUserName ?? WindowsIdentity.GetCurrent().Name.Split('\\')[1];
 
             return context;
         }
-        
-        public Context InitCommonLib(Context context)
+
+        public IContext InitCommonLib(IContext context)
         {
             //4. Create our Cache/Initialize Common Lib
             var path = context.GetCachePath();
             Cache cache;
             if (!File.Exists(path))
-            {
                 cache = null;
-            }
             else
-            {
                 try
                 {
                     var bytes = File.ReadAllBytes(path);
@@ -314,62 +163,46 @@ namespace SharpHound
                     context.Logger.LogError("Error loading cache: {exception}, creating new", e);
                     cache = null;
                 }
-            }
+
             CommonLib.InitializeCommonLib(context.Logger, cache);
             return context;
         }
 
-        public Context StartBaseCollectionTask(Context context)
+        public IContext StartBaseCollectionTask(IContext context)
         {
-            context.Logger.LogInformation("Flags: {flags}",context.ResolvedCollectionMethods.GetIndividualFlags());
+            context.Logger.LogInformation("Flags: {flags}", context.ResolvedCollectionMethods.GetIndividualFlags());
             //5. Start the collection
             var task = new CollectionTask(context);
             context.CollectionTask = task.StartCollection();
             return context;
         }
-        
-        public async Task<Context> AwaitBaseRunCompletion(Context context)
+
+        public async Task<IContext> AwaitBaseRunCompletion(IContext context)
         {
             // 6. Wait for the collection to complete
             await context.CollectionTask;
             return context;
         }
-        
-        public Context CancellationCheck(Context context)
-        {
-            // 12. 
-            if (context.CancellationTokenSource.IsCancellationRequested) context.CancellationTokenSource.Cancel();
-            return context;
-        }
 
-        
 
-        public Context DisposeTimer(Context context)
+        public IContext DisposeTimer(IContext context)
         {
             //14. Dispose the context.
             context.Timer?.Dispose();
             return context;
         }
 
-        public Context Finish(Context context)
+        public IContext Finish(IContext context)
         {
             ////16. And we're done!
             var currTime = DateTime.Now;
             context.Logger.LogInformation(
-                "SharpHound Enumeration Completed at {Time} on {Date}! Happy Graphing!", currTime.ToShortTimeString(), currTime.ToShortDateString());
+                "SharpHound Enumeration Completed at {Time} on {Date}! Happy Graphing!", currTime.ToShortTimeString(),
+                currTime.ToShortDateString());
             return context;
         }
 
-        
-
-        public Context MarkRunComplete(Context context)
-        {
-            // 11. Mark our initial run as complete, signalling that we're now in the looping phase
-            context.Flags.InitialCompleted = true;
-            return context;
-        }
-
-        public Context SaveCacheFile(Context context)
+        public IContext SaveCacheFile(IContext context)
         {
             // 15. Program exit started. Save the cache file
             var cache = Cache.GetCacheInstance();
@@ -380,9 +213,8 @@ namespace SharpHound
             return context;
         }
 
-        
 
-        public Context StartLoop(Context context)
+        public IContext StartLoop(IContext context)
         {
             // 13.Start looping if specified
             // if (context.Flags.Loop)
@@ -454,15 +286,15 @@ namespace SharpHound
             return context;
         }
 
-        public Context StartLoopTimer(Context context)
+        public IContext StartLoopTimer(IContext context)
         {
             //4. Start Loop Timer
             //If loop is set, set up our timer for the loop now
             if (!context.Flags.Loop) return context;
-            
+
             context.LoopEnd = context.LoopEnd.AddMilliseconds(context.LoopDuration.Value.TotalMilliseconds);
             context.Timer = new Timer();
-            context.Timer.Elapsed += (sender, eventArgs) =>
+            context.Timer.Elapsed += (_, _) =>
             {
                 if (context.Flags.InitialCompleted)
                     context.CancellationTokenSource.Cancel();
@@ -473,6 +305,21 @@ namespace SharpHound
             context.Timer.AutoReset = false;
             context.Timer.Start();
 
+            return context;
+        }
+
+        public IContext CancellationCheck(IContext context)
+        {
+            // 12. 
+            if (context.CancellationTokenSource.IsCancellationRequested) context.CancellationTokenSource.Cancel();
+            return context;
+        }
+
+
+        public IContext MarkRunComplete(IContext context)
+        {
+            // 11. Mark our initial run as complete, signalling that we're now in the looping phase
+            context.Flags.InitialCompleted = true;
             return context;
         }
     }
@@ -487,13 +334,10 @@ namespace SharpHound
         {
             var logger = new BasicLogger((int)LogLevel.Information);
             var options = Parser.Default.ParseArguments<Options>(args);
-            
+
             await options.WithParsedAsync(async options =>
             {
-                if (!options.ResolveCollectionMethods(logger, out var resolved, out var dconly))
-                {
-                    return;
-                }
+                if (!options.ResolveCollectionMethods(logger, out var resolved, out var dconly)) return;
 
                 logger = new BasicLogger(options.Verbosity);
 
@@ -523,10 +367,7 @@ namespace SharpHound
                     SSL = options.SecureLDAP
                 };
 
-                if (options.DomainController != null)
-                {
-                    ldapOptions.Server = options.DomainController;
-                }
+                if (options.DomainController != null) ldapOptions.Server = options.DomainController;
 
                 if (options.LDAPUsername != null)
                 {
@@ -540,7 +381,7 @@ namespace SharpHound
                     ldapOptions.Password = options.LDAPPassword;
                 }
 
-                Context context = new BaseContext(logger, ldapOptions, flags)
+                IContext context = new BaseContext(logger, ldapOptions, flags)
                 {
                     DomainName = options.Domain,
                     CacheFileName = options.CacheName,
@@ -564,8 +405,8 @@ namespace SharpHound
                 };
 
                 // Create new chain links
-                Links<Context> links = new SharpLinks();
-        
+                Links<IContext> links = new SharpLinks();
+
                 // Run our chain
                 context = links.Initialize(context, ldapOptions);
                 if (context.Flags.IsFaulted)
@@ -583,8 +424,8 @@ namespace SharpHound
                 // links.StartLoop(context);
                 // links.DisposeTimer(context);
                 context = links.SaveCacheFile(context);
-                context = links.Finish(context);
-                });
+                links.Finish(context);
+            });
         }
     }
 

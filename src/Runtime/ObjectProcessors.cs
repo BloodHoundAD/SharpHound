@@ -5,12 +5,13 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Sharphound.Client;
 using SharpHoundCommonLib;
 using SharpHoundCommonLib.Enums;
 using SharpHoundCommonLib.OutputTypes;
 using SharpHoundCommonLib.Processors;
 
-namespace SharpHound.Core.Behavior
+namespace Sharphound.Runtime
 {
     public class ObjectProcessors
     {
@@ -20,8 +21,7 @@ namespace SharpHound.Core.Behavior
         private readonly ComputerAvailability _computerAvailability;
         private readonly ComputerSessionProcessor _computerSessionProcessor;
         private readonly ContainerProcessor _containerProcessor;
-        private readonly Context _context;
-        private readonly string _domainSid;
+        private readonly IContext _context;
         private readonly DomainTrustProcessor _domainTrustProcessor;
         private readonly GroupProcessor _groupProcessor;
         private readonly LDAPPropertyProcessor _ldapPropertyProcessor;
@@ -29,10 +29,9 @@ namespace SharpHound.Core.Behavior
         private readonly ResolvedCollectionMethod _methods;
         private readonly SPNProcessors _spnProcessor;
 
-        public ObjectProcessors(Context context, ILogger log)
+        public ObjectProcessors(IContext context, ILogger log)
         {
             _context = context;
-            _domainSid = GetDomainSid();
             _aclProcessor = new ACLProcessor(context.LDAPUtils);
             _spnProcessor = new SPNProcessors(context.LDAPUtils);
             _ldapPropertyProcessor = new LDAPPropertyProcessor(context.LDAPUtils);
@@ -102,7 +101,7 @@ namespace SharpHound.Core.Behavior
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
             {
                 var userProps = await _ldapPropertyProcessor.ReadUserProperties(entry);
-                ret.Properties.Merge(userProps.Props);
+                ContextUtils.Merge(ret.Properties, userProps.Props);
                 ret.HasSIDHistory = userProps.SidHistory;
                 ret.AllowedToDelegate = userProps.AllowedToDelegate;
             }
@@ -110,7 +109,7 @@ namespace SharpHound.Core.Behavior
             if ((_methods & ResolvedCollectionMethod.SPNTargets) != 0)
             {
                 var spn = entry.GetArrayProperty(LDAPProperties.ServicePrincipalNames);
-                
+
                 var targets = new List<SPNPrivilege>();
                 var enumerator = _spnProcessor.ReadSPNTargets(spn, entry.DistinguishedName)
                     .GetAsyncEnumerator(_cancellationToken);
@@ -154,7 +153,7 @@ namespace SharpHound.Core.Behavior
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
             {
                 var computerProps = await _ldapPropertyProcessor.ReadComputerProperties(entry);
-                ret.Properties.Merge(computerProps.Props);
+                ContextUtils.Merge(ret.Properties, computerProps.Props);
                 ret.AllowedToDelegate = computerProps.AllowedToDelegate;
                 ret.AllowedToAct = computerProps.AllowedToAct;
                 ret.HasSIDHistory = computerProps.SidHistory;
@@ -164,8 +163,10 @@ namespace SharpHound.Core.Behavior
                 return ret;
 
             string apiName;
-            apiName = _context.RealDNSName != null ? entry.GetDNSName(_context.RealDNSName) : resolvedSearchResult.DisplayName;
-            
+            apiName = _context.RealDNSName != null
+                ? entry.GetDNSName(_context.RealDNSName)
+                : resolvedSearchResult.DisplayName;
+
             var availability = await _computerAvailability.IsComputerAvailable(resolvedSearchResult, entry);
 
             if (!availability.Connectable)
@@ -183,14 +184,12 @@ namespace SharpHound.Core.Behavior
                     resolvedSearchResult.ObjectId, resolvedSearchResult.Domain);
                 ret.Sessions = sessionResult;
                 if (_context.Flags.DumpComputerStatus)
-                {
                     await compStatusChannel.Writer.WriteAsync(new CSVComputerStatus
                     {
                         Status = sessionResult.Collected ? StatusSuccess : sessionResult.FailureReason,
                         Task = "NetSessionEnum",
                         ComputerName = resolvedSearchResult.DisplayName
                     }, _cancellationToken);
-                }
             }
 
             if ((_methods & ResolvedCollectionMethod.LoggedOn) != 0)
@@ -199,27 +198,23 @@ namespace SharpHound.Core.Behavior
                     samAccountName, resolvedSearchResult.ObjectId);
                 ret.PrivilegedSessions = privSessionResult;
                 if (_context.Flags.DumpComputerStatus)
-                {
                     await compStatusChannel.Writer.WriteAsync(new CSVComputerStatus
                     {
                         Status = privSessionResult.Collected ? StatusSuccess : privSessionResult.FailureReason,
                         Task = "NetWkstaUserEnum",
                         ComputerName = resolvedSearchResult.DisplayName
                     }, _cancellationToken);
-                }
 
                 var registrySessionResult = _computerSessionProcessor.ReadUserSessionsRegistry(apiName,
                     resolvedSearchResult.Domain, resolvedSearchResult.ObjectId);
                 ret.RegistrySessions = registrySessionResult;
                 if (_context.Flags.DumpComputerStatus)
-                {
                     await compStatusChannel.Writer.WriteAsync(new CSVComputerStatus
                     {
                         Status = privSessionResult.Collected ? StatusSuccess : privSessionResult.FailureReason,
                         Task = "RegistrySessions",
                         ComputerName = resolvedSearchResult.DisplayName
                     }, _cancellationToken);
-                }
             }
 
             if (!_methods.IsLocalGroupCollectionSet())
@@ -339,7 +334,7 @@ namespace SharpHound.Core.Behavior
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
             {
                 var groupProps = LDAPPropertyProcessor.ReadGroupProperties(entry);
-                ret.Properties.Merge(groupProps);
+                ContextUtils.Merge(ret.Properties, groupProps);
             }
 
             return ret;
@@ -368,7 +363,7 @@ namespace SharpHound.Core.Behavior
                 ret.Trusts = _domainTrustProcessor.EnumerateDomainTrusts(resolvedSearchResult.Domain).ToArray();
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
-                ret.Properties.Merge(LDAPPropertyProcessor.ReadDomainProperties(entry));
+                ContextUtils.Merge(ret.Properties, LDAPPropertyProcessor.ReadDomainProperties(entry));
 
             if ((_methods & ResolvedCollectionMethod.Container) != 0)
             {
@@ -399,7 +394,7 @@ namespace SharpHound.Core.Behavior
             }
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
-                ret.Properties.Merge(LDAPPropertyProcessor.ReadGPOProperties(entry));
+                ContextUtils.Merge(ret.Properties, LDAPPropertyProcessor.ReadGPOProperties(entry));
 
             return ret;
         }
@@ -424,7 +419,7 @@ namespace SharpHound.Core.Behavior
             }
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
-                ret.Properties.Merge(LDAPPropertyProcessor.ReadOUProperties(entry));
+                ContextUtils.Merge(ret.Properties, LDAPPropertyProcessor.ReadOUProperties(entry));
 
             if ((_methods & ResolvedCollectionMethod.Container) != 0)
             {
@@ -461,13 +456,6 @@ namespace SharpHound.Core.Behavior
             }
 
             return ret;
-        }
-
-        private static string GetDomainSid()
-        {
-            var dObj = System.DirectoryServices.ActiveDirectory.Domain.GetCurrentDomain();
-
-            return dObj.GetDirectoryEntry().GetSid();
         }
     }
 }

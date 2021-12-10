@@ -1,33 +1,27 @@
 using System.Collections.Generic;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using SharpHound.Core.Behavior;
+using Sharphound.Client;
 using SharpHoundCommonLib;
 using SharpHoundCommonLib.Enums;
 using SharpHoundCommonLib.LDAPQueries;
 
-namespace SharpHound.Producers
+namespace Sharphound.Producers
 {
     /// <summary>
     ///     Base class for producing LDAP data to feed to other parts of the program
     /// </summary>
     public abstract class BaseProducer
     {
-        protected readonly Context _context;
-        protected readonly Channel<ISearchResultEntry> _channel;
+        protected readonly Channel<ISearchResultEntry> Channel;
+        protected readonly IContext Context;
 
-        protected BaseProducer(Context context, Channel<ISearchResultEntry> channel)
+        protected BaseProducer(IContext context, Channel<ISearchResultEntry> channel)
         {
-            _context = context;
-            _channel = channel;
+            Context = context;
+            Channel = channel;
         }
 
-        /// <summary>
-        ///     Produces SearchResultEntry items from LDAP and pushes them to a queue.
-        /// </summary>
-        /// <param name="queue"></param>
-        /// <returns></returns>
         public abstract Task Produce();
 
         protected LDAPData CreateLDAPData()
@@ -37,8 +31,8 @@ namespace SharpHound.Producers
             var data = new LDAPData();
             props.AddRange(CommonProperties.BaseQueryProps);
             props.AddRange(CommonProperties.TypeResolutionProps);
-            
-            var methods = _context.ResolvedCollectionMethods;
+
+            var methods = Context.ResolvedCollectionMethods;
 
             if ((methods & ResolvedCollectionMethod.ObjectProps) != 0 || (methods & ResolvedCollectionMethod.ACL) != 0)
             {
@@ -46,42 +40,29 @@ namespace SharpHound.Producers
                 props.AddRange(CommonProperties.ObjectPropsProps);
 
                 if ((methods & ResolvedCollectionMethod.Container) != 0)
-                {
                     props.AddRange(CommonProperties.ContainerProps);
-                }
 
                 if ((methods & ResolvedCollectionMethod.Group) != 0)
-                {
                     props.AddRange(CommonProperties.GroupResolutionProps);
-                }
 
-                if ((methods & ResolvedCollectionMethod.ACL) != 0)
-                {
-                    props.AddRange(CommonProperties.ACLProps);
-                }
-                
+                if ((methods & ResolvedCollectionMethod.ACL) != 0) props.AddRange(CommonProperties.ACLProps);
+
                 if ((methods & ResolvedCollectionMethod.LocalAdmin) != 0 ||
-                    (methods & ResolvedCollectionMethod.DCOM) != 0 || (methods & ResolvedCollectionMethod.PSRemote) != 0 ||
-                    (methods & ResolvedCollectionMethod.RDP) != 0 || (methods & ResolvedCollectionMethod.LoggedOn) != 0 ||
-                    (methods & ResolvedCollectionMethod.Session) != 0 || (methods & ResolvedCollectionMethod.ObjectProps) != 0)
-                {
+                    (methods & ResolvedCollectionMethod.DCOM) != 0 ||
+                    (methods & ResolvedCollectionMethod.PSRemote) != 0 ||
+                    (methods & ResolvedCollectionMethod.RDP) != 0 ||
+                    (methods & ResolvedCollectionMethod.LoggedOn) != 0 ||
+                    (methods & ResolvedCollectionMethod.Session) != 0 ||
+                    (methods & ResolvedCollectionMethod.ObjectProps) != 0)
                     props.AddRange(CommonProperties.ComputerMethodProps);
-                }
 
-                if ((methods & ResolvedCollectionMethod.Trusts) != 0)
-                {
-                    props.AddRange(CommonProperties.DomainTrustProps);
-                }
+                if ((methods & ResolvedCollectionMethod.Trusts) != 0) props.AddRange(CommonProperties.DomainTrustProps);
 
                 if ((methods & ResolvedCollectionMethod.GPOLocalGroup) != 0)
-                {
                     props.AddRange(CommonProperties.GPOLocalGroupProps);
-                }
 
                 if ((methods & ResolvedCollectionMethod.SPNTargets) != 0)
-                {
                     props.AddRange(CommonProperties.SPNTargetProps);
-                }
             }
             else
             {
@@ -98,9 +79,12 @@ namespace SharpHound.Producers
                 }
 
                 if ((methods & ResolvedCollectionMethod.LocalAdmin) != 0 ||
-                    (methods & ResolvedCollectionMethod.DCOM) != 0 || (methods & ResolvedCollectionMethod.PSRemote) != 0 ||
-                    (methods & ResolvedCollectionMethod.RDP) != 0 || (methods & ResolvedCollectionMethod.LoggedOn) != 0 ||
-                    (methods & ResolvedCollectionMethod.Session) != 0 || (methods & ResolvedCollectionMethod.ObjectProps) != 0)
+                    (methods & ResolvedCollectionMethod.DCOM) != 0 ||
+                    (methods & ResolvedCollectionMethod.PSRemote) != 0 ||
+                    (methods & ResolvedCollectionMethod.RDP) != 0 ||
+                    (methods & ResolvedCollectionMethod.LoggedOn) != 0 ||
+                    (methods & ResolvedCollectionMethod.Session) != 0 ||
+                    (methods & ResolvedCollectionMethod.ObjectProps) != 0)
                 {
                     query = query.AddComputers();
                     props.AddRange(CommonProperties.ComputerMethodProps);
@@ -119,10 +103,7 @@ namespace SharpHound.Producers
                 }
             }
 
-            if (_context.LdapFilter != null)
-            {
-                query.AddFilter(_context.LdapFilter, true);
-            }
+            if (Context.LdapFilter != null) query.AddFilter(Context.LdapFilter, true);
 
             data.Filter = query;
             data.Props = props;

@@ -1,4 +1,4 @@
-﻿namespace SharpHound.Core
+﻿namespace Sharphound.Client
 {
     public class Flags
     {

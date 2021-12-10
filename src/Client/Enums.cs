@@ -1,9 +1,7 @@
-﻿using System;
-
-namespace SharpHound.Enums
+﻿namespace Sharphound.Client
 {
     /// <summary>
-    /// Enums representing the possible collection methods specified in options
+    ///     Enums representing the possible collection methods specified in options
     /// </summary>
     public enum CollectionMethodOptions
     {
