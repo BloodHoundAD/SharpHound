@@ -97,8 +97,8 @@ namespace SharpHound
         //Misc Options
         [Option(HelpText = "Interval in which to display status in milliseconds", Default = 30000)]
         public int StatusInterval { get; set; }
-        [Option('v', HelpText = "Enable verbose output", Default = false)]
-        public bool Verbose { get; set; }
+        [Option('v', HelpText = "Enable verbose output", Default = (int)LogLevel.Information)]
+        public int Verbosity { get; set; }
 
         internal bool ResolveCollectionMethods(ILogger logger, out ResolvedCollectionMethod resolved, out bool dconly)
         {

@@ -42,26 +42,6 @@ namespace SharpHound
 {
     #region Reference Implementations
 
-    internal class VerboseDiagnosticsTraceWriter : ILogger
-    {
-        public IDisposable BeginScope<TState>(TState state)
-        {
-            return null;
-        }
-
-        public bool IsEnabled(LogLevel logLevel)
-        {
-            return true;
-        }
-
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception,
-            Func<TState, Exception, string> formatter)
-        {
-            //System.Diagnostics.Debug.WriteLine($"{logLevel} {state.ToString()}");
-            Console.WriteLine($"[{DateTime.Now}] {logLevel} {state.ToString()}");
-        }
-    }
-
     internal class BasicLogger : ILogger
     {
         private readonly int _verbosity;
@@ -125,10 +105,6 @@ namespace SharpHound
 
         public ResolvedCollectionMethod ResolvedCollectionMethods { get; set; }
         public bool IsFaulted { get; set; }
-        public OutputTasks OutputTasks { get; set; }
-
-        public IEnumerable<string> CollectionMethods { get; set; }
-
         public string LdapFilter { get; set; }
         public string SearchBase { get; set; }
         public string DomainName { get; set; }
@@ -136,7 +112,6 @@ namespace SharpHound
         public string ComputerFile { get; set; }
         public string ZipFilename { get; set; }
         public string ZipPassword { get; set; }
-        public Cache Cache { get; set; }
         public string CurrentUserName { get; set; }
         public ILogger Logger { get; set; }
         public Timer Timer { get; set; }
@@ -146,7 +121,6 @@ namespace SharpHound
 
         public int StatusInterval { get; set; }
         public int Threads { get; set; }
-        public int Verbosity { get; set; }
         public string RealDNSName { get; set; }
         public string OutputPrefix { get; set; }
         public string OutputDirectory { get; set; }
@@ -516,10 +490,12 @@ namespace SharpHound
             
             await options.WithParsedAsync(async options =>
             {
-                if (!options.ResolveCollectionMethods(logger,out var resolved, out var dconly))
+                if (!options.ResolveCollectionMethods(logger, out var resolved, out var dconly))
                 {
                     return;
                 }
+
+                logger = new BasicLogger(options.Verbosity);
 
                 var flags = new Flags
                 {

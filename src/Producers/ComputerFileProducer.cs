@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using SharpHound.Core.Behavior;
 using SharpHoundCommonLib;
 
@@ -55,16 +56,16 @@ namespace SharpHound.Producers
                         if (entry == null)
                         {
                             //We couldn't find the entry for whatever reason
-                            Console.WriteLine($"Failed to resolve {computer}");
+                            _context.Logger.LogWarning("Failed to resolve {computer}", computer);
                             continue;
                         }
 
                         //Success! Send the computer to be processed
                         await _channel.Writer.WriteAsync(entry, cancellationToken);
                     }
-                    catch
+                    catch (Exception e)
                     {
-                        Console.WriteLine($"Failed to resolve {computer}");
+                        _context.Logger.LogWarning(e, "Failed to resolve {computer}", computer);
                     }
                 }
             }

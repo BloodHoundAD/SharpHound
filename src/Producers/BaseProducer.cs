@@ -119,6 +119,11 @@ namespace SharpHound.Producers
                 }
             }
 
+            if (_context.LdapFilter != null)
+            {
+                query.AddFilter(_context.LdapFilter, true);
+            }
+
             data.Filter = query;
             data.Props = props;
             return data;

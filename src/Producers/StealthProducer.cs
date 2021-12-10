@@ -5,6 +5,7 @@ using System.DirectoryServices.Protocols;
 using System.Linq;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Sharphound.Client;
 using SharpHound.Core.Behavior;
 using SharpHoundCommonLib;
@@ -50,8 +51,7 @@ namespace SharpHound.Producers
 
         private async void BuildStealthTargets()
         {
-            Console.WriteLine("[+] Finding Stealth Targets from LDAP Properties");
-            Console.WriteLine();
+            _context.Logger.LogInformation("Finding Stealth Targets from LDAP Properties");
 
             var targets = await FindPathTargetSids();
             if (!_context.Flags.ExcludeDomainControllers)

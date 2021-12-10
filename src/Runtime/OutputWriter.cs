@@ -67,7 +67,7 @@ namespace SharpHound
         private void CloseOutput()
         {
             PrintStatus();
-            Console.WriteLine($"Enumeration finished in {_runTimer.Elapsed}");
+            _context.Logger.LogInformation("Enumeration finished in {RunTime}", _runTimer.Elapsed);
         }
 
         private void PrintStatus()

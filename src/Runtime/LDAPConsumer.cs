@@ -40,7 +40,6 @@ namespace SharpHound.Core.Behavior
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e);
                     log.LogError(e, "error in consumer");
                 }
             }

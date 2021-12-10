@@ -68,7 +68,6 @@ namespace SharpHound
 
         internal async Task StartCollection()
         {
-            Console.WriteLine($"NumThreads: {_context.Threads}");
             for (var i = 0; i < _context.Threads; i++)
             {
                 var consumer = LDAPConsumer.ConsumeSearchResults(_ldapChannel, _compStatusChannel, _outputChannel,

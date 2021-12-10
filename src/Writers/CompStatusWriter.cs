@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using SharpHound.Core.Behavior;
 using SharpHoundCommonLib;
 
@@ -49,6 +50,7 @@ namespace SharpHound.Writers
         {
             await WriteData();
             await _streamWriter.FlushAsync();
+            CloseLog();
         }
 
         protected override void CreateFile()
@@ -61,7 +63,7 @@ namespace SharpHound.Writers
             _streamWriter.WriteLine("ComputerName,Task,Status");
         }
 
-        internal void CloseLog()
+        private void CloseLog()
         {
             try
             {
@@ -72,7 +74,7 @@ namespace SharpHound.Writers
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Error closing task log: {e}");
+                _context.Logger.LogError(e, "Error closing task log");
             }
         }
     }
