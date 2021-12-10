@@ -133,19 +133,20 @@ namespace SharpHound.Core.Behavior
     {
         OutputTasks OutputTasks { get; set; }
         Flags Flags { get; set; }
-        LDAPQueryOptions Options { get; set; }
         IEnumerable<string> CollectionMethods { get; set; }
         string LdapFilter { get; set; }
         string SearchBase { get; set; }
         string DomainName { get; set; }
         string CacheFileName { get; set; }
         string ZipFilename { get; set; }
+        string ZipPassword { get; set; }
         Timer Timer { get; set; }
         Cache Cache { get; set; }
         TimeSpan? LoopDuration { get; set; }
         TimeSpan? LoopInterval { get; set; }
         DateTime LoopEnd { get; set; }
         string CurrentUserName { get; set; }
+        int Verbosity { get; set; }
         int StatusInterval { get; set; }
         int Threads { get; set; }
         string RealDNSName { get; set; }

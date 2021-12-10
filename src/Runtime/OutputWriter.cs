@@ -7,12 +7,15 @@ using System.Linq;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Timers;
+using ICSharpCode.SharpZipLib.Core;
+using ICSharpCode.SharpZipLib.Zip;
 using Microsoft.Extensions.Logging;
 using SharpHound.Core.Behavior;
 using SharpHound.Writers;
 using SharpHoundCommonLib;
 using SharpHoundCommonLib.Enums;
 using SharpHoundCommonLib.OutputTypes;
+using Utf8Json;
 
 namespace SharpHound
 {
@@ -61,7 +64,7 @@ namespace SharpHound
             _statusTimer.Start();
         }
 
-        private async Task CloseOutput()
+        private void CloseOutput()
         {
             PrintStatus();
             Console.WriteLine($"Enumeration finished in {_runTimer.Elapsed}");
@@ -120,6 +123,7 @@ namespace SharpHound
                 }
             }
 
+            Console.WriteLine("Closing writers");
             await FlushWriters();
         }
 
@@ -132,7 +136,7 @@ namespace SharpHound
             await _gpoOutput.FlushWriter();
             await _ouOutput.FlushWriter();
             await _containerOutput.FlushWriter();
-            await CloseOutput();
+            CloseOutput();
             ZipFiles();
         }
 
@@ -149,8 +153,15 @@ namespace SharpHound
                 resolvedFileName = _context.ResolveFileName(Path.GetRandomFileName(), "zip", true);
             }
 
-            using var zipWriter = new FileStream(resolvedFileName, FileMode.Create);
-            using var zip = new ZipArchive(zipWriter, ZipArchiveMode.Create);
+            using var fs = File.Create(resolvedFileName);
+            using var zipStream = new ZipOutputStream(fs);
+            zipStream.SetLevel(9);
+                
+            if (_context.ZipPassword != null)
+            {
+                zipStream.Password = _context.ZipPassword;
+            }
+            
             var fileList = new List<string>();
             fileList.AddRange(new[]
             {
@@ -158,10 +169,22 @@ namespace SharpHound
                 _containerOutput.GetFilename(), _domainOutput.GetFilename(), _gpoOutput.GetFilename(),
                 _ouOutput.GetFilename()
             });
-
+                
             foreach (var entry in fileList.Where(x => !string.IsNullOrEmpty(x)))
             {
-                zip.CreateEntryFromFile(entry, Path.GetFileName(entry));
+                var fi = new FileInfo(entry);
+                var zipEntry = new ZipEntry(fi.Name) { DateTime = fi.LastWriteTime, Size = fi.Length};
+                zipStream.PutNextEntry(zipEntry);
+                
+                var buffer = new byte[4096];
+                using (var fileStream = File.OpenRead(entry))
+                {
+                    StreamUtils.Copy(fileStream, zipStream, buffer);
+                }
+                    
+                zipStream.CloseEntry();
+                
+                File.Delete(entry);
             }
         }
     }

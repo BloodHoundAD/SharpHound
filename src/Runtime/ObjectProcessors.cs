@@ -87,16 +87,15 @@ namespace SharpHound.Core.Behavior
 
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {
-                var ntsd = entry.GetByteProperty("ntsecuritydescriptor");
-                var aces = _aclProcessor.ProcessACL(ntsd, resolvedSearchResult.Domain, Label.User, false);
-                var gmsa = entry.GetByteProperty("msds-groupmsamembership");
+                var aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry);
+                var gmsa = entry.GetByteProperty(LDAPProperties.GroupMSAMembership);
                 ret.Aces = aces.Concat(_aclProcessor.ProcessGMSAReaders(gmsa, resolvedSearchResult.Domain)).ToArray();
-                ret.IsACLProtected = _aclProcessor.IsACLProtected(ntsd);
+                ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
             }
 
             if ((_methods & ResolvedCollectionMethod.Group) != 0)
             {
-                var pg = entry.GetProperty("primarygroupid");
+                var pg = entry.GetProperty(LDAPProperties.PrimaryGroupID);
                 ret.PrimaryGroupSID = GroupProcessor.GetPrimaryGroupInfo(pg, resolvedSearchResult.ObjectId);
             }
 
@@ -110,16 +109,15 @@ namespace SharpHound.Core.Behavior
 
             if ((_methods & ResolvedCollectionMethod.SPNTargets) != 0)
             {
-                var spn = entry.GetArrayProperty("serviceprincipalnames");
-
-
-                var targets = new List<SPNTarget>();
+                var spn = entry.GetArrayProperty(LDAPProperties.ServicePrincipalNames);
+                
+                var targets = new List<SPNPrivilege>();
                 var enumerator = _spnProcessor.ReadSPNTargets(spn, entry.DistinguishedName)
                     .GetAsyncEnumerator(_cancellationToken);
 
                 while (await enumerator.MoveNextAsync()) targets.Add(enumerator.Current);
 
-                ret.SpnTargets = targets.ToArray();
+                ret.SPNTargets = targets.ToArray();
             }
 
             return ret;
@@ -138,20 +136,18 @@ namespace SharpHound.Core.Behavior
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
 
-            var hasLaps = entry.GetProperty("ms-mcs-admpwdexpirationtime") != null;
+            var hasLaps = entry.HasLAPS();
             ret.Properties.Add("haslaps", hasLaps);
 
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {
-                var ntsd = entry.GetByteProperty("ntsecuritydescriptor");
-                ret.Aces = _aclProcessor.ProcessACL(ntsd, resolvedSearchResult.Domain, Label.Computer,
-                    entry.GetProperty("ms-mcs-admpwdexpirationtime") != null).ToArray();
-                ret.IsACLProtected = _aclProcessor.IsACLProtected(ntsd);
+                ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
+                ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
             }
 
             if ((_methods & ResolvedCollectionMethod.Group) != 0)
             {
-                var pg = entry.GetProperty("primarygroupid");
+                var pg = entry.GetProperty(LDAPProperties.PrimaryGroupID);
                 ret.PrimaryGroupSID = GroupProcessor.GetPrimaryGroupInfo(pg, resolvedSearchResult.ObjectId);
             }
 
@@ -167,8 +163,10 @@ namespace SharpHound.Core.Behavior
             if (!_methods.IsComputerCollectionSet())
                 return ret;
 
-            var availability = await _computerAvailability.IsComputerAvailable(resolvedSearchResult.DisplayName,
-                entry.GetProperty("operatingsystem"), entry.GetProperty("pwdlastset"));
+            string apiName;
+            apiName = _context.RealDNSName != null ? entry.GetDNSName(_context.RealDNSName) : resolvedSearchResult.DisplayName;
+            
+            var availability = await _computerAvailability.IsComputerAvailable(resolvedSearchResult, entry);
 
             if (!availability.Connectable)
             {
@@ -177,11 +175,11 @@ namespace SharpHound.Core.Behavior
                 return ret;
             }
 
-            var samAccountName = entry.GetProperty("samaccountname")?.TrimEnd('$');
+            var samAccountName = entry.GetProperty(LDAPProperties.SAMAccountName)?.TrimEnd('$');
 
             if ((_methods & ResolvedCollectionMethod.Session) != 0)
             {
-                var sessionResult = await _computerSessionProcessor.ReadUserSessions(resolvedSearchResult.DisplayName,
+                var sessionResult = await _computerSessionProcessor.ReadUserSessions(apiName,
                     resolvedSearchResult.ObjectId, resolvedSearchResult.Domain);
                 ret.Sessions = sessionResult;
                 if (_context.Flags.DumpComputerStatus)
@@ -195,10 +193,9 @@ namespace SharpHound.Core.Behavior
                 }
             }
 
-
             if ((_methods & ResolvedCollectionMethod.LoggedOn) != 0)
             {
-                var privSessionResult = await _computerSessionProcessor.ReadUserSessionsPrivileged(resolvedSearchResult.DisplayName,
+                var privSessionResult = _computerSessionProcessor.ReadUserSessionsPrivileged(apiName,
                     samAccountName, resolvedSearchResult.ObjectId);
                 ret.PrivilegedSessions = privSessionResult;
                 if (_context.Flags.DumpComputerStatus)
@@ -210,8 +207,20 @@ namespace SharpHound.Core.Behavior
                         ComputerName = resolvedSearchResult.DisplayName
                     }, _cancellationToken);
                 }
+
+                var registrySessionResult = _computerSessionProcessor.ReadUserSessionsRegistry(apiName,
+                    resolvedSearchResult.Domain, resolvedSearchResult.ObjectId);
+                ret.RegistrySessions = registrySessionResult;
+                if (_context.Flags.DumpComputerStatus)
+                {
+                    await compStatusChannel.Writer.WriteAsync(new CSVComputerStatus
+                    {
+                        Status = privSessionResult.Collected ? StatusSuccess : privSessionResult.FailureReason,
+                        Task = "RegistrySessions",
+                        ComputerName = resolvedSearchResult.DisplayName
+                    }, _cancellationToken);
+                }
             }
-                
 
             if (!_methods.IsLocalGroupCollectionSet())
                 return ret;
@@ -318,14 +327,13 @@ namespace SharpHound.Core.Behavior
 
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {
-                var ntsd = entry.GetByteProperty("ntsecuritydescriptor");
-                ret.Aces = _aclProcessor.ProcessACL(ntsd, resolvedSearchResult.Domain, Label.Group, false).ToArray();
-                ret.IsACLProtected = _aclProcessor.IsACLProtected(ntsd);
+                ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
+                ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
             }
 
             if ((_methods & ResolvedCollectionMethod.Group) != 0)
                 ret.Members = _groupProcessor
-                    .ReadGroupMembers(entry.DistinguishedName, entry.GetArrayProperty("member"))
+                    .ReadGroupMembers(resolvedSearchResult, entry)
                     .ToArray();
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
@@ -352,9 +360,8 @@ namespace SharpHound.Core.Behavior
 
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {
-                var ntsd = entry.GetByteProperty("ntsecuritydescriptor");
-                ret.Aces = _aclProcessor.ProcessACL(ntsd, resolvedSearchResult.Domain, Label.Domain, false).ToArray();
-                ret.IsACLProtected = _aclProcessor.IsACLProtected(ntsd);
+                ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
+                ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
             }
 
             if ((_methods & ResolvedCollectionMethod.Trusts) != 0)
@@ -365,8 +372,8 @@ namespace SharpHound.Core.Behavior
 
             if ((_methods & ResolvedCollectionMethod.Container) != 0)
             {
-                ret.ChildObjects = _containerProcessor.GetContainerChildObjects(entry.DistinguishedName).ToArray();
-                ret.Links = _containerProcessor.ReadContainerGPLinks(entry.GetProperty("gplink")).ToArray();
+                ret.ChildObjects = _containerProcessor.GetContainerChildObjects(resolvedSearchResult, entry).ToArray();
+                ret.Links = _containerProcessor.ReadContainerGPLinks(resolvedSearchResult, entry).ToArray();
             }
 
             return ret;
@@ -387,9 +394,8 @@ namespace SharpHound.Core.Behavior
 
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {
-                var ntsd = entry.GetByteProperty("ntsecuritydescriptor");
-                ret.Aces = _aclProcessor.ProcessACL(ntsd, resolvedSearchResult.Domain, Label.GPO, false).ToArray();
-                ret.IsACLProtected = _aclProcessor.IsACLProtected(ntsd);
+                ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
+                ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
             }
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
@@ -413,9 +419,8 @@ namespace SharpHound.Core.Behavior
 
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {
-                var ntsd = entry.GetByteProperty("ntsecuritydescriptor");
-                ret.Aces = _aclProcessor.ProcessACL(ntsd, resolvedSearchResult.Domain, Label.OU, false).ToArray();
-                ret.IsACLProtected = _aclProcessor.IsACLProtected(ntsd);
+                ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
+                ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
             }
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
@@ -423,10 +428,10 @@ namespace SharpHound.Core.Behavior
 
             if ((_methods & ResolvedCollectionMethod.Container) != 0)
             {
-                ret.ChildObjects = _containerProcessor.GetContainerChildObjects(entry.DistinguishedName).ToArray();
+                ret.ChildObjects = _containerProcessor.GetContainerChildObjects(resolvedSearchResult, entry).ToArray();
                 ret.Properties.Add("blocksinheritance",
-                    ContainerProcessor.ReadBlocksInheritance(entry.DistinguishedName));
-                ret.Links = _containerProcessor.ReadContainerGPLinks(entry.GetProperty("gplink")).ToArray();
+                    ContainerProcessor.ReadBlocksInheritance(entry.GetProperty("gpoptions")));
+                ret.Links = _containerProcessor.ReadContainerGPLinks(resolvedSearchResult, entry).ToArray();
             }
 
             return ret;
@@ -450,10 +455,9 @@ namespace SharpHound.Core.Behavior
 
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {
-                var ntsd = entry.GetByteProperty("ntsecuritydescriptor");
-                ret.Aces = _aclProcessor.ProcessACL(ntsd, resolvedSearchResult.Domain, Label.Container, false)
+                ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry)
                     .ToArray();
-                ret.IsACLProtected = _aclProcessor.IsACLProtected(ntsd);
+                ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
             }
 
             return ret;

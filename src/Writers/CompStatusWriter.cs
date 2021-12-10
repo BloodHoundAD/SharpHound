@@ -72,7 +72,7 @@ namespace SharpHound.Writers
             }
             catch (Exception e)
             {
-                Console.WriteLine("Error closing task log: {e");
+                Console.WriteLine($"Error closing task log: {e}");
             }
         }
     }

@@ -2,8 +2,10 @@
 using System.Linq;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using SharpHound.Core.Behavior;
 using SharpHoundCommonLib;
+using SharpHoundCommonLib.Enums;
 
 namespace SharpHound.Producers
 {
@@ -22,11 +24,11 @@ namespace SharpHound.Producers
         {
             var cancellationToken = _context.CancellationTokenSource.Token;
 
-            var (query, props) = CreateLDAPData();
+            var ldapData = CreateLDAPData();
 
             //Do a basic  LDAP search and grab results
-            foreach (var searchResult in _context.LDAPUtils.QueryLDAP(query.GetFilter(), SearchScope.Subtree,
-                props.Distinct().ToArray(), cancellationToken, _context.DomainName, adsPath: _context.SearchBase))
+            foreach (var searchResult in _context.LDAPUtils.QueryLDAP(ldapData.Filter.GetFilter(), SearchScope.Subtree,
+                ldapData.Props.Distinct().ToArray(), cancellationToken, _context.DomainName, adsPath: _context.SearchBase, includeAcl:(_context.ResolvedCollectionMethods & ResolvedCollectionMethod.ACL) != 0))
             {
                 var l = searchResult.DistinguishedName.ToLower();
                 if (l.Contains("cn=domainupdates,cn=system"))

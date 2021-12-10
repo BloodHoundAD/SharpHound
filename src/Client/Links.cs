@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using SharpHound.Core.Behavior;
+using SharpHoundCommonLib;
 
 namespace SharpHound.Core
 {
@@ -9,7 +10,7 @@ namespace SharpHound.Core
     /// <typeparam name="T">A context to be populated.</typeparam>
     public interface Links<T>
     {
-        Context Initialize(Context context, string ldapUsername, string ldapPassword);
+        Context Initialize(Context context, LDAPConfig options);
         Context
             TestConnection(
                 T context); //Initial LDAP connection test. Search for the well known administrator SID to make sure we can connect successfully.

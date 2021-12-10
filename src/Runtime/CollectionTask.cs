@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -14,7 +15,7 @@ namespace SharpHound
     {
         private readonly Context _context;
         private readonly Channel<CSVComputerStatus> _compStatusChannel;
-        private readonly Channel<ISearchResultEntry> _inputChannel;
+        private readonly Channel<ISearchResultEntry> _ldapChannel;
         private readonly Channel<OutputBase> _outputChannel;
 
         private readonly OutputWriter _outputWriter;
@@ -27,19 +28,19 @@ namespace SharpHound
         {
             _context = context;
             _log = context.Logger;
-            _inputChannel = Channel.CreateBounded<ISearchResultEntry>(new BoundedChannelOptions(1000)
+            _ldapChannel = Channel.CreateBounded<ISearchResultEntry>(new BoundedChannelOptions(1000)
             {
-                SingleWriter = false,
-                SingleReader = true,
+                SingleWriter = true,
+                SingleReader = false,
                 FullMode = BoundedChannelFullMode.Wait
+            });
+            _compStatusChannel = Channel.CreateUnbounded<CSVComputerStatus>(new UnboundedChannelOptions
+            {
+                SingleReader = true,
+                SingleWriter = false,
             });
             if (context.Flags.DumpComputerStatus)
             {
-                _compStatusChannel = Channel.CreateUnbounded<CSVComputerStatus>(new UnboundedChannelOptions
-                {
-                    SingleReader = true,
-                    SingleWriter = false,
-                });
                 _compStatusWriter = new CompStatusWriter(context, _compStatusChannel);
             }
                 
@@ -50,28 +51,28 @@ namespace SharpHound
             });
 
             _outputWriter = new OutputWriter(context, _outputChannel);
-            
 
             if (context.Flags.Stealth)
             {
-                _producer = new StealthProducer(context, _inputChannel);
+                _producer = new StealthProducer(context, _ldapChannel);
             }
             else if (context.ComputerFile != null)
             {
-                _producer = new ComputerFileProducer(context, _inputChannel);
+                _producer = new ComputerFileProducer(context, _ldapChannel);
             }
             else
             {
-                _producer = new LdapProducer(context, _inputChannel);
+                _producer = new LdapProducer(context, _ldapChannel);
             }
         }
 
         internal async Task StartCollection()
         {
+            Console.WriteLine($"NumThreads: {_context.Threads}");
             for (var i = 0; i < _context.Threads; i++)
             {
-                var consumer = LDAPConsumer.ConsumeSearchResults(_inputChannel, _compStatusChannel, _outputChannel,
-                    _context);
+                var consumer = LDAPConsumer.ConsumeSearchResults(_ldapChannel, _compStatusChannel, _outputChannel,
+                    _context, i);
                 _taskPool.Add(consumer);
             }
             
@@ -80,13 +81,10 @@ namespace SharpHound
             var compStatusTask = _compStatusWriter?.StartWriter();
             var producerTask = _producer.Produce();
 
-            while (!producerTask.IsCompleted)
-            {
-                await Task.WhenAny(Task.Delay(_context.StatusInterval), producerTask);
-            }
-            
+            await producerTask;
+
             _log.LogInformation("Producer has finished, closing LDAP channel");
-            _inputChannel.Writer.Complete();
+            _ldapChannel.Writer.Complete();
             _log.LogInformation("LDAP channel closed, waiting for consumers");
             await Task.WhenAll(_taskPool);
             _log.LogInformation("Consumers finished, closing output channel");

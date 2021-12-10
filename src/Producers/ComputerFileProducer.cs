@@ -25,8 +25,7 @@ namespace SharpHound.Producers
             var computerFile = _context.ComputerFile;
             var cancellationToken = _context.CancellationTokenSource.Token;
 
-            var (query, props) = CreateLDAPData();
-            props = props.ToArray();
+            var ldapData = CreateLDAPData();
 
             try
             {
@@ -52,7 +51,7 @@ namespace SharpHound.Producers
                         //Convert the sid to a hex representation and find the entry in the domain
                         var hexSid = Helpers.ConvertSidToHexSid(sid);
                         var entry = _context.LDAPUtils.QueryLDAP($"(objectsid={hexSid})", SearchScope.Subtree,
-                            props.ToArray(), cancellationToken, _context.DomainName, adsPath:_context.SearchBase).DefaultIfEmpty(null).FirstOrDefault();
+                            ldapData.Props.ToArray(), cancellationToken, _context.DomainName, adsPath:_context.SearchBase).DefaultIfEmpty(null).FirstOrDefault();
                         if (entry == null)
                         {
                             //We couldn't find the entry for whatever reason

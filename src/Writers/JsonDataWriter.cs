@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -76,9 +77,6 @@ namespace SharpHound.Writers
                 Queue.Clear();
             }
 
-            if (_initialWrite)
-                return;
-            
             await _streamWriter.WriteAsync(@"],""meta"":");
             var meta = new MetaTag
             {
@@ -88,6 +86,8 @@ namespace SharpHound.Writers
             };
             await _streamWriter.WriteAsync(JsonSerializer.ToJsonString(meta));
             await _streamWriter.WriteAsync("}");
+            await _streamWriter.FlushAsync();
+            _streamWriter.Close();
         }
 
         /// <summary>

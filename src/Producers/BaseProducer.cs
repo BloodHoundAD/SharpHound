@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using SharpHound.Core.Behavior;
 using SharpHoundCommonLib;
 using SharpHoundCommonLib.Enums;
@@ -29,10 +30,11 @@ namespace SharpHound.Producers
         /// <returns></returns>
         public abstract Task Produce();
 
-        protected (LDAPFilter, IEnumerable<string>) CreateLDAPData()
+        protected LDAPData CreateLDAPData()
         {
             var query = new LDAPFilter();
             var props = new List<string>();
+            var data = new LDAPData();
             props.AddRange(CommonProperties.BaseQueryProps);
             props.AddRange(CommonProperties.TypeResolutionProps);
             
@@ -117,7 +119,15 @@ namespace SharpHound.Producers
                 }
             }
 
-            return (query, props);
+            data.Filter = query;
+            data.Props = props;
+            return data;
         }
+    }
+
+    public class LDAPData
+    {
+        internal LDAPFilter Filter { get; set; }
+        internal IEnumerable<string> Props { get; set; }
     }
 }

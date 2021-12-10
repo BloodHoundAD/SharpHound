@@ -23,7 +23,9 @@ namespace SharpHound.Producers
 
         public StealthProducer(Context context, Channel<ISearchResultEntry> channel) : base(context, channel)
         {
-            (_query, _props) = CreateLDAPData();
+            var ldapData = CreateLDAPData();
+            _query = ldapData.Filter;
+            _props = ldapData.Props;
         }
 
         /// <summary>

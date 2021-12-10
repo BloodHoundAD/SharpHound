@@ -24,6 +24,7 @@ using System.Security.Principal;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using CommandLine;
 using Microsoft.Extensions.Logging;
 using SharpHound.Core;
 using SharpHound.Core.Behavior;
@@ -61,31 +62,64 @@ namespace SharpHound
         }
     }
 
+    internal class BasicLogger : ILogger
+    {
+        private readonly int _verbosity;
+        public BasicLogger(int verbosity)
+        {
+            _verbosity = verbosity;
+        }
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+        {
+            WriteLevel(logLevel, state.ToString(), exception);
+        }
+
+        public bool IsEnabled(LogLevel logLevel)
+        {
+            return (int)logLevel >= _verbosity;
+        }
+
+        public IDisposable BeginScope<TState>(TState state)
+        {
+            return null;
+        }
+        
+        private void WriteLevel(LogLevel level, string message, Exception e = null)
+        {
+            if (IsEnabled(level))
+                Console.WriteLine(FormatLog(level, message, e));
+        }
+        
+        private static string FormatLog(LogLevel level, string message, Exception e)
+        {
+            var time = DateTime.Now;
+            return $"{time:O}|{level.ToString().ToUpper()}|{message}{(e != null ? $"\n{e}" : "")}";
+        }
+    }
+
     /// <summary>
     ///     Console Context holds the various properties to be populated/validated by the chain of responsibility.
     /// </summary>
     public class BaseContext : IDisposable, Context
     {
-        private static readonly Regex SPNRegex = new Regex(@".*\/.*", RegexOptions.Compiled);
-        private static readonly string ProcStartTime = $"{DateTime.Now:yyyyMMddHHmmss}";
         private static string _currentLoopTime = $"{DateTime.Now:yyyyMMddHHmmss}";
-        private static readonly Random RandomGen = new Random();
+        private static readonly Lazy<Random> RandomGen = new();
 
         private bool disposedValue;
 
-        private BaseContext(LDAPQueryOptions options)
+        private BaseContext(LDAPConfig ldapConfig)
         {
             LDAPUtils = new LDAPUtils();
+            LDAPUtils.SetLDAPConfig(ldapConfig);
             CancellationTokenSource = new CancellationTokenSource();
-            Options = options;
         }
 
-        public BaseContext(ILogger logger, LDAPQueryOptions options, Flags flags)
+        public BaseContext(ILogger logger, LDAPConfig ldapConfig, Flags flags)
         {
             Logger = logger;
-            Options = options;
             Flags = flags;
             LDAPUtils = new LDAPUtils();
+            LDAPUtils.SetLDAPConfig(ldapConfig);
             CancellationTokenSource = new CancellationTokenSource();
         }
 
@@ -93,7 +127,6 @@ namespace SharpHound
         public bool IsFaulted { get; set; }
         public OutputTasks OutputTasks { get; set; }
 
-        public LDAPQueryOptions Options { get; set; }
         public IEnumerable<string> CollectionMethods { get; set; }
 
         public string LdapFilter { get; set; }
@@ -102,6 +135,7 @@ namespace SharpHound
         public string CacheFileName { get; set; }
         public string ComputerFile { get; set; }
         public string ZipFilename { get; set; }
+        public string ZipPassword { get; set; }
         public Cache Cache { get; set; }
         public string CurrentUserName { get; set; }
         public ILogger Logger { get; set; }
@@ -112,6 +146,7 @@ namespace SharpHound
 
         public int StatusInterval { get; set; }
         public int Threads { get; set; }
+        public int Verbosity { get; set; }
         public string RealDNSName { get; set; }
         public string OutputPrefix { get; set; }
         public string OutputDirectory { get; set; }
@@ -126,7 +161,6 @@ namespace SharpHound
 
         public Task CollectionTask { get; set; }
         public Flags Flags { get; set; }
-        ResolvedCollectionMethod Context.ResolvedCollectionMethods { get; set; }
 
         public async Task DoDelay()
         {
@@ -140,7 +174,7 @@ namespace SharpHound
             }
 
             var percent = (int)Math.Floor((double)(Jitter * (Throttle / 100)));
-            var delay = Throttle + RandomGen.Next(-percent, percent);
+            var delay = Throttle + RandomGen.Value.Next(-percent, percent);
             await Task.Delay(delay);
         }
         
@@ -221,18 +255,16 @@ namespace SharpHound
         /// </summary>
         /// <param name="printer"></param>
         /// <param name="context"></param>
-        public Context Initialize(Context context, string ldapUsername, string ldapPassword)
+        public Context Initialize(Context context, LDAPConfig options)
         {
             //We've successfully parsed arguments, lets do some options post-processing.
             var currentTime = DateTime.Now;
-            var initString =
-                $"Initializing SharpHound at {currentTime.ToShortTimeString()} on {currentTime.ToShortDateString()}";
             //var padString = new string('-', initString.Length);
-            context.Logger.LogInformation(initString);
+            context.Logger.LogInformation("Initializing SharpHound at {time} on {date}", currentTime.ToShortTimeString(), currentTime.ToShortDateString());
             // Check to make sure both LDAP options are set if either is set
 
-            if (ldapPassword != null && ldapUsername == null ||
-                ldapUsername != null && ldapPassword == null)
+            if (options.Password != null && options.Username == null ||
+                options.Username != null && options.Password == null)
             {
                 context.Logger.LogTrace("You must specify both LdapUsername and LdapPassword if using these options!");
                 context.Flags.IsFaulted = true;
@@ -315,6 +347,7 @@ namespace SharpHound
 
         public Context StartBaseCollectionTask(Context context)
         {
+            context.Logger.LogInformation("Flags: {flags}",context.ResolvedCollectionMethods.GetIndividualFlags());
             //5. Start the collection
             var task = new CollectionTask(context);
             context.CollectionTask = task.StartCollection();
@@ -476,168 +509,106 @@ namespace SharpHound
 
     internal class Program
     {
-        /// <param name="CollectionMethods">
-        ///     Collection Methods: Container, Group, LocalGroup, GPOLocalGroup, Session, LoggedOn,
-        ///     ObjectProps, ACL, ComputerOnly, Trusts, Default, RDP, DCOM, DCOnly
-        /// </param>
-        /// <param name="Stealth">Use Stealth Targetting/Enumeration Options</param>
-        /// <param name="Domain">Specify domain for enumeration></param>
-        /// <param name="WindowsOnly">Limit collection to Windows hosts only</param>
-        /// <param name="ComputerFile">Path to textfile containing line seperated computer names/sids</param>
-        /// <param name="NoOutput">Don't output data from this run. Used for debugging purposes</param>
-        /// <param name="OutputDirectory">Folder to output files too</param>
-        /// <param name="OutputPrefix">Prefix for output files</param>
-        /// <param name="CacheFilename">Filename for the cache file (defaults to b64 of machine sid)</param>
-        /// <param name="RandomizeFilenames">Randomize filenames for JSON files</param>
-        /// <param name="ZipFilename">Filename for the Zip file</param>
-        /// <param name="NoSaveCache">Don't save cache to disk. Caching will still be done in memory</param>
-        /// <param name="EncryptZip">Encrypt zip file using a random password</param>
-        /// <param name="NoZip">Don't zip JSON files</param>
-        /// <param name="InvalidateCache">Invalidate and rebuild the cache</param>
-        /// <param name="LdapFilter">Custom LDAP Filter to append to the search. Use this to filter collection</param>
-        /// <param name="DomainController">Domain Controller to connect too. Specifying this value can result in data loss</param>
-        /// <param name="LdapPort">Port LDAP is running on. Defaults to 389/636 for LDAPS</param>
-        /// <param name="SecureLDAP">Connect to LDAPS (LDAP SSL) instead of regular LDAP</param>
-        /// <param name="DisableKerberosSigning">Disables Kerberos Signing/Sealing making LDAP traffic viewable</param>
-        /// <param name="LdapUsername"></param>
-        /// <param name="LdapPassword"></param>
-        /// <param name="SearchBase">
-        ///     Base DistinguishedName to start search at. Use this to limit your search. Equivalent to the
-        ///     old --OU option
-        /// </param>
-        /// <param name="SkipPortScan">Skip SMB port checks when connecting to computers</param>
-        /// <param name="PortScanTimeout">Timeout for SMB port check</param>
-        /// <param name="ExcludeDomainControllers">Exclude domain controllers from enumeration (useful to avoid Microsoft ATP/ATA)</param>
-        /// <param name="Throttle">Throttle requests to computers in milliseconds</param>
-        /// <param name="Jitter">Jitter between requests to computers</param>
-        /// <param name="OverrideUserName">Override username to filter for NetSessionEnum</param>
-        /// <param name="NoRegistryLoggedOn">Disable remote registry check in LoggedOn collection</param>
-        /// <param name="DumpComputerStatus">Dump success/failures related to computer enumeration to a CSV file</param>
-        /// <param name="RealDNSName"></param>
-        /// <param name="CollectAllProperties">Collect all LDAP properties from objects instead of a subset during ObjectProps</param>
-        /// <param name="StatusInterval">Interval in which to display status in milliseconds</param>
-        /// <param name="Verbose">Enable Verbose Output</param>
-        /// <param name="Loop">Loop Computer Collection</param>
-        /// <param name="LoopDuration">Duration to perform looping (Default 02:00:00)</param>
-        /// <param name="LoopInterval">Interval to sleep between loops</param>
-        // private static void Main(
-        //     IEnumerable<string> CollectionMethods,
-        //     bool Stealth,
-        //     string Domain,
-        //     bool WindowsOnly,
-        //     string ComputerFile,
-        //     bool NoOutput,
-        //     string OutputDirectory,
-        //     string OutputPrefix,
-        //     string CacheFilename,
-        //     bool RandomizeFilenames,
-        //     string ZipFilename,
-        //     bool NoSaveCache,
-        //     bool EncryptZip,
-        //     bool NoZip,
-        //     bool InvalidateCache,
-        //     string LdapFilter,
-        //     string DomainController,
-        //     int LdapPort,
-        //     bool SecureLDAP,
-        //     bool DisableKerberosSigning,
-        //     string LdapUsername,
-        //     string LdapPassword,
-        //     string SearchBase,
-        //     bool SkipPortScan,
-        //     int PortScanTimeout = 2000,
-        //     bool ExcludeDomainControllers = false,
-        //     int Throttle = int.MinValue,
-        //     int Jitter = int.MinValue,
-        //     string OverrideUserName = null,
-        //     bool NoRegistryLoggedOn = false,
-        //     bool DumpComputerStatus = false,
-        //     string RealDNSName = null,
-        //     bool CollectAllProperties = false,
-        //     int StatusInterval = 30000,
-        //     bool Verbose = false,
-        //     bool Loop = false,
-        //     int Threads = 50,
-        //     TimeSpan? LoopDuration = null,
-        //     TimeSpan? LoopInterval = null
-        // )
-        // {
-        //     // Setup Logging       
-        //     var logger = new VerboseDiagnosticsTraceWriter();
-        //
-        //     var flags = new Flags
-        //     {
-        //         Loop = Loop,
-        //         Verbose = Verbose,
-        //         DumpComputerStatus = DumpComputerStatus,
-        //         NoRegistryLoggedOn = NoRegistryLoggedOn,
-        //         ExcludeDomainControllers = ExcludeDomainControllers,
-        //         SkipPortScan = SkipPortScan,
-        //         DisableKerberosSigning = DisableKerberosSigning,
-        //         SecureLDAP = SecureLDAP,
-        //         InvalidateCache = InvalidateCache,
-        //         NoZip = NoZip,
-        //         EncryptZip = EncryptZip,
-        //         NoSaveCache = NoSaveCache,
-        //         NoOutput = NoOutput,
-        //         WindowsOnly = WindowsOnly,
-        //         Stealth = Stealth
-        //     };
-        //
-        //     if (!ContextUtils.ResolveBaseCollectionMethods(CollectionMethods, flags.Stealth, out var resolved))
-        //     {
-        //         return;
-        //     }
-        //
-        //     var options = new LDAPQueryOptions();
-        //
-        //     // Context for this execution
-        //     Context context = new BaseContext(logger, options, flags)
-        //     {
-        //         DomainName = Domain,
-        //         CacheFileName = CacheFilename,
-        //         ZipFilename = ZipFilename,
-        //         SearchBase = SearchBase,
-        //         StatusInterval = StatusInterval,
-        //         RealDNSName = RealDNSName,
-        //         ComputerFile = ComputerFile,
-        //         OutputPrefix = OutputPrefix,
-        //         OutputDirectory = OutputDirectory,
-        //         Jitter = Jitter,
-        //         Throttle = Throttle,
-        //         LdapFilter = LdapFilter,
-        //         PortScanTimeout = PortScanTimeout,
-        //         ResolvedCollectionMethods = resolved,
-        //         Threads = Threads,
-        //         IsFaulted = false
-        //     };
-        //
-        //     // Create new chain links
-        //     Links<Context> links = new SharpLinks();
-        //
-        //     // Run our chain
-        //     links.Initialize(context, LdapUsername, LdapPassword);
-        //     if (context.Flags.IsFaulted)
-        //         return;
-        //     links.TestConnection(context);
-        //     if (context.Flags.IsFaulted)
-        //         return;
-        //     links.SetSessionUserName(OverrideUserName, context);
-        //     links.InitCommonLib(context);
-        //     links.StartBaseCollectionTask(context);
-        //     links.AwaitBaseRunCompletion(context);
-        //     // links.BuildPipeline(context);
-        //     // links.AwaitPipelineCompeletionTask(context);
-        //     // links.StartLoopTimer(context);
-        //     // links.StartLoop(context);
-        //     // links.DisposeTimer(context);
-        //     links.SaveCacheFile(context);
-        //     links.Finish(context);
-        // }
-
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
+            var logger = new BasicLogger((int)LogLevel.Information);
+            var options = Parser.Default.ParseArguments<Options>(args);
             
+            await options.WithParsedAsync(async options =>
+            {
+                if (!options.ResolveCollectionMethods(logger,out var resolved, out var dconly))
+                {
+                    return;
+                }
+
+                var flags = new Flags
+                {
+                    Loop = options.Loop,
+                    DumpComputerStatus = options.TrackComputerCalls,
+                    NoRegistryLoggedOn = options.SkipRegistryLoggedOn,
+                    ExcludeDomainControllers = options.ExcludeDCs,
+                    SkipPortScan = options.SkipPortCheck,
+                    DisableKerberosSigning = options.DisableSigning,
+                    SecureLDAP = options.SecureLDAP,
+                    InvalidateCache = options.RebuildCache,
+                    NoZip = options.NoZip,
+                    NoOutput = false,
+                    Stealth = options.Stealth,
+                    RandomizeFilenames = options.RandomFileNames,
+                    NoSaveCache = options.MemCache,
+                    CollectAllProperties = options.CollectAllProperties,
+                    DCOnly = dconly
+                };
+
+                var ldapOptions = new LDAPConfig
+                {
+                    Port = options.LDAPPort,
+                    DisableSigning = options.DisableSigning,
+                    SSL = options.SecureLDAP
+                };
+
+                if (options.DomainController != null)
+                {
+                    ldapOptions.Server = options.DomainController;
+                }
+
+                if (options.LDAPUsername != null)
+                {
+                    if (options.LDAPPassword == null)
+                    {
+                        logger.LogError("You must specify LDAPPassword if using the LDAPUsername options");
+                        return;
+                    }
+
+                    ldapOptions.Username = options.LDAPUsername;
+                    ldapOptions.Password = options.LDAPPassword;
+                }
+
+                Context context = new BaseContext(logger, ldapOptions, flags)
+                {
+                    DomainName = options.Domain,
+                    CacheFileName = options.CacheName,
+                    ZipFilename = options.ZipFilename,
+                    SearchBase = options.DistinguishedName,
+                    StatusInterval = options.StatusInterval,
+                    RealDNSName = options.RealDNSName,
+                    ComputerFile = options.ComputerFile,
+                    OutputPrefix = options.OutputPrefix,
+                    OutputDirectory = options.OutputDirectory,
+                    Jitter = options.Jitter,
+                    Throttle = options.Throttle,
+                    LdapFilter = options.LdapFilter,
+                    PortScanTimeout = options.PortCheckTimeout,
+                    ResolvedCollectionMethods = resolved,
+                    Threads = options.Threads,
+                    LoopDuration = options.LoopDuration,
+                    LoopInterval = options.LoopInterval,
+                    ZipPassword = options.ZipPassword,
+                    IsFaulted = false
+                };
+
+                // Create new chain links
+                Links<Context> links = new SharpLinks();
+        
+                // Run our chain
+                context = links.Initialize(context, ldapOptions);
+                if (context.Flags.IsFaulted)
+                    return;
+                context = links.TestConnection(context);
+                if (context.Flags.IsFaulted)
+                    return;
+                context = links.SetSessionUserName(options.OverrideUserName, context);
+                context = links.InitCommonLib(context);
+                context = links.StartBaseCollectionTask(context);
+                context = await links.AwaitBaseRunCompletion(context);
+                // links.BuildPipeline(context);
+                // links.AwaitPipelineCompeletionTask(context);
+                // links.StartLoopTimer(context);
+                // links.StartLoop(context);
+                // links.DisposeTimer(context);
+                context = links.SaveCacheFile(context);
+                context = links.Finish(context);
+                });
         }
     }
 
