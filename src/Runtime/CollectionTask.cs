@@ -56,7 +56,7 @@ namespace Sharphound.Runtime
                 _producer = new LdapProducer(context, _ldapChannel);
         }
 
-        internal async Task StartCollection()
+        internal async Task<string> StartCollection()
         {
             for (var i = 0; i < _context.Threads; i++)
             {
@@ -84,8 +84,10 @@ namespace Sharphound.Runtime
             _outputChannel.Writer.Complete();
             _compStatusChannel?.Writer.Complete();
             _log.LogInformation("Output channel closed, waiting for output task to complete");
-            await outputTask;
+            var zipFile = await outputTask;
             if (compStatusTask != null) await compStatusTask;
+
+            return zipFile;
         }
     }
 }

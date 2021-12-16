@@ -25,6 +25,7 @@ namespace Sharphound.Runtime
         private readonly DomainTrustProcessor _domainTrustProcessor;
         private readonly GroupProcessor _groupProcessor;
         private readonly LDAPPropertyProcessor _ldapPropertyProcessor;
+        private readonly GPOLocalGroupProcessor _gpoLocalGroupProcessor;
         private readonly ILogger _log;
         private readonly ResolvedCollectionMethod _methods;
         private readonly SPNProcessors _spnProcessor;
@@ -40,6 +41,7 @@ namespace Sharphound.Runtime
             _computerSessionProcessor = new ComputerSessionProcessor(context.LDAPUtils);
             _groupProcessor = new GroupProcessor(context.LDAPUtils);
             _containerProcessor = new ContainerProcessor(context.LDAPUtils);
+            _gpoLocalGroupProcessor = new GPOLocalGroupProcessor(context.LDAPUtils);
             _methods = context.ResolvedCollectionMethods;
             _cancellationToken = context.CancellationTokenSource.Token;
             _log = log;
@@ -59,9 +61,9 @@ namespace Sharphound.Runtime
                 case Label.GPO:
                     return ProcessGPOObject(entry, resolvedSearchResult);
                 case Label.Domain:
-                    return ProcessDomainObject(entry, resolvedSearchResult);
+                    return await ProcessDomainObject(entry, resolvedSearchResult);
                 case Label.OU:
-                    return ProcessOUObject(entry, resolvedSearchResult);
+                    return await ProcessOUObject(entry, resolvedSearchResult);
                 case Label.Container:
                     return ProcessContainerObject(entry, resolvedSearchResult);
                 case Label.Base:
@@ -162,8 +164,7 @@ namespace Sharphound.Runtime
             if (!_methods.IsComputerCollectionSet())
                 return ret;
 
-            string apiName;
-            apiName = _context.RealDNSName != null
+            var apiName = _context.RealDNSName != null
                 ? entry.GetDNSName(_context.RealDNSName)
                 : resolvedSearchResult.DisplayName;
 
@@ -340,7 +341,7 @@ namespace Sharphound.Runtime
             return ret;
         }
 
-        private Domain ProcessDomainObject(ISearchResultEntry entry,
+        private async Task<Domain> ProcessDomainObject(ISearchResultEntry entry,
             ResolvedSearchResult resolvedSearchResult)
         {
             var ret = new Domain
@@ -371,6 +372,12 @@ namespace Sharphound.Runtime
                 ret.Links = _containerProcessor.ReadContainerGPLinks(resolvedSearchResult, entry).ToArray();
             }
 
+            if ((_methods & ResolvedCollectionMethod.GPOLocalGroup) != 0)
+            {
+                var gplink = entry.GetProperty(LDAPProperties.GPLink);
+                ret.GPOChanges = await _gpoLocalGroupProcessor.ReadGPOLocalGroups(gplink, entry.DistinguishedName);
+            }
+
             return ret;
         }
 
@@ -399,7 +406,7 @@ namespace Sharphound.Runtime
             return ret;
         }
 
-        private OU ProcessOUObject(ISearchResultEntry entry,
+        private async Task<OU> ProcessOUObject(ISearchResultEntry entry,
             ResolvedSearchResult resolvedSearchResult)
         {
             var ret = new OU
@@ -427,6 +434,12 @@ namespace Sharphound.Runtime
                 ret.Properties.Add("blocksinheritance",
                     ContainerProcessor.ReadBlocksInheritance(entry.GetProperty("gpoptions")));
                 ret.Links = _containerProcessor.ReadContainerGPLinks(resolvedSearchResult, entry).ToArray();
+            }
+
+            if ((_methods & ResolvedCollectionMethod.GPOLocalGroup) != 0)
+            {
+                var gplink = entry.GetProperty(LDAPProperties.GPLink);
+                ret.GPOChanges = await _gpoLocalGroupProcessor.ReadGPOLocalGroups(gplink, entry.DistinguishedName);
             }
 
             return ret;

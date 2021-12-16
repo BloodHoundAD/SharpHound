@@ -82,7 +82,7 @@ namespace Sharphound.Runtime
                     Process.GetCurrentProcess().PrivateMemorySize64 / 1024 / 1024);
         }
 
-        internal async Task StartWriter()
+        internal async Task<string> StartWriter()
         {
             while (await _outputChannel.Reader.WaitToReadAsync())
             {
@@ -117,10 +117,10 @@ namespace Sharphound.Runtime
             }
 
             Console.WriteLine("Closing writers");
-            await FlushWriters();
+            return await FlushWriters();
         }
 
-        private async Task FlushWriters()
+        private async Task<string> FlushWriters()
         {
             await _computerOutput.FlushWriter();
             await _userOutput.FlushWriter();
@@ -130,13 +130,14 @@ namespace Sharphound.Runtime
             await _ouOutput.FlushWriter();
             await _containerOutput.FlushWriter();
             CloseOutput();
-            ZipFiles();
+            var fileName = ZipFiles();
+            return fileName;
         }
 
-        private void ZipFiles()
+        private string ZipFiles()
         {
             if (_context.Flags.NoZip || _context.Flags.NoOutput)
-                return;
+                return null;
 
             var filename = string.IsNullOrEmpty(_context.ZipFilename) ? "BloodHound" : _context.ZipFilename;
             var resolvedFileName = _context.ResolveFileName(filename, "zip", true);
@@ -174,6 +175,8 @@ namespace Sharphound.Runtime
 
                 File.Delete(entry);
             }
+
+            return resolvedFileName;
         }
     }
 }

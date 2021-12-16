@@ -184,6 +184,11 @@ namespace Sharphound
             return context;
         }
 
+        public IContext PrepareForLooping(IContext context)
+        {
+            context.ResolvedCollectionMethods = context.ResolvedCollectionMethods.GetLoopCollectionMethods();
+            return context;
+        }
 
         public IContext DisposeTimer(IContext context)
         {
@@ -292,7 +297,7 @@ namespace Sharphound
             //If loop is set, set up our timer for the loop now
             if (!context.Flags.Loop) return context;
 
-            context.LoopEnd = context.LoopEnd.AddMilliseconds(context.LoopDuration.Value.TotalMilliseconds);
+            context.LoopEnd = context.LoopEnd.AddMilliseconds(context.LoopDuration.TotalMilliseconds);
             context.Timer = new Timer();
             context.Timer.Elapsed += (_, _) =>
             {
@@ -301,7 +306,7 @@ namespace Sharphound
                 else
                     context.Flags.NeedsCancellation = true;
             };
-            context.Timer.Interval = context.LoopDuration.Value.TotalMilliseconds;
+            context.Timer.Interval = context.LoopDuration.TotalMilliseconds;
             context.Timer.AutoReset = false;
             context.Timer.Start();
 
@@ -418,8 +423,6 @@ namespace Sharphound
                 context = links.InitCommonLib(context);
                 context = links.StartBaseCollectionTask(context);
                 context = await links.AwaitBaseRunCompletion(context);
-                // links.BuildPipeline(context);
-                // links.AwaitPipelineCompeletionTask(context);
                 // links.StartLoopTimer(context);
                 // links.StartLoop(context);
                 // links.DisposeTimer(context);

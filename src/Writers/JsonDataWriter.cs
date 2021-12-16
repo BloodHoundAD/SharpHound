@@ -75,13 +75,18 @@ namespace Sharphound.Writers
                 await _streamWriter.WriteAsync(string.Join(",", Queue.Select(JsonSerializer.ToJsonString)));
                 Queue.Clear();
             }
+            else
+            {
+                return;
+            }
 
             await _streamWriter.WriteAsync(@"],""meta"":");
             var meta = new MetaTag
             {
                 Count = Count,
                 CollectionMethods = (long)_context.ResolvedCollectionMethods,
-                DataType = DataType
+                DataType = DataType,
+                Version = 4
             };
             await _streamWriter.WriteAsync(JsonSerializer.ToJsonString(meta));
             await _streamWriter.WriteAsync("}");

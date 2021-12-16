@@ -44,9 +44,8 @@ namespace Sharphound
         public ILogger Logger { get; set; }
         public Timer Timer { get; set; }
         public DateTime LoopEnd { get; set; }
-        public TimeSpan? LoopDuration { get; set; }
-        public TimeSpan? LoopInterval { get; set; }
-
+        public TimeSpan LoopDuration { get; set; }
+        public TimeSpan LoopInterval { get; set; }
         public int StatusInterval { get; set; }
         public int Threads { get; set; }
         public string RealDNSName { get; set; }
@@ -54,13 +53,9 @@ namespace Sharphound
         public string OutputDirectory { get; set; }
         public int Throttle { get; set; }
         public int Jitter { get; set; }
-
         public int PortScanTimeout { get; set; } = 500;
-
         public CancellationTokenSource CancellationTokenSource { get; set; }
-
         public ILDAPUtils LDAPUtils { get; set; }
-
         public Task CollectionTask { get; set; }
         public Flags Flags { get; set; }
 

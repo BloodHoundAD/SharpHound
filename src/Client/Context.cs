@@ -36,8 +36,8 @@ namespace Sharphound.Client
         string ZipFilename { get; set; }
         string ZipPassword { get; set; }
         Timer Timer { get; set; }
-        TimeSpan? LoopDuration { get; set; }
-        TimeSpan? LoopInterval { get; set; }
+        TimeSpan LoopDuration { get; set; }
+        TimeSpan LoopInterval { get; set; }
         DateTime LoopEnd { get; set; }
         string CurrentUserName { get; set; }
         int StatusInterval { get; set; }

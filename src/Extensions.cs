@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Channels;
 using SharpHoundCommonLib;
+using SharpHoundCommonLib.Enums;
 
 namespace Sharphound
 {
@@ -94,6 +95,17 @@ namespace Sharphound
             while (await channel.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
             while (channel.TryRead(out var item))
                 yield return item;
+        }
+        
+        /// <summary>
+        /// Removes non-computer collection methods from specified ones for looping
+        /// </summary>
+        /// <returns></returns>
+        internal static ResolvedCollectionMethod GetLoopCollectionMethods(this ResolvedCollectionMethod methods)
+        {
+            const ResolvedCollectionMethod computerCollectionMethods = ResolvedCollectionMethod.LocalGroups | ResolvedCollectionMethod.LoggedOn |
+                                                                       ResolvedCollectionMethod.Session;
+            return methods & computerCollectionMethods;
         }
     }
 }

@@ -19,6 +19,7 @@ namespace Sharphound.Client
         IContext InitCommonLib(T context);
         IContext StartBaseCollectionTask(T context);
         Task<IContext> AwaitBaseRunCompletion(T context);
+        IContext PrepareForLooping(T context);
         IContext StartLoopTimer(T context);
         IContext StartLoop(T context);
         IContext DisposeTimer(T context);
