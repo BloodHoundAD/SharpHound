@@ -44,7 +44,7 @@ namespace Sharphound.Runtime
                     log.LogError(e, "error in consumer");
                 }
 
-            log.LogInformation("Consumer task on thread {id} completed", Thread.CurrentThread.ManagedThreadId);
+            log.LogDebug("Consumer task on thread {id} completed", Thread.CurrentThread.ManagedThreadId);
         }
     }
 }
