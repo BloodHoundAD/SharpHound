@@ -338,7 +338,13 @@ namespace Sharphound
         public static async Task Main(string[] args)
         {
             var logger = new BasicLogger((int)LogLevel.Information);
-            var options = Parser.Default.ParseArguments<Options>(args);
+            var parser = new Parser(with =>
+            {
+                with.CaseInsensitiveEnumValues = true;
+                with.CaseSensitive = false;
+                with.HelpWriter = Console.Error;
+            });
+            var options = parser.ParseArguments<Options>(args);
 
             await options.WithParsedAsync(async options =>
             {
@@ -362,7 +368,8 @@ namespace Sharphound
                     RandomizeFilenames = options.RandomFileNames,
                     NoSaveCache = options.MemCache,
                     CollectAllProperties = options.CollectAllProperties,
-                    DCOnly = dconly
+                    DCOnly = dconly,
+                    PrettyPrint = options.PrettyPrint
                 };
 
                 var ldapOptions = new LDAPConfig

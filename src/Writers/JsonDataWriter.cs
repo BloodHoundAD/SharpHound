@@ -15,6 +15,7 @@ namespace Sharphound.Writers
     public class JsonDataWriter<T> : BaseWriter<T>
     {
         private const string FileStart = @"{""data"":[";
+        private const string FileStartPretty = "{\n\t\"data\":[\n";
         private readonly IContext _context;
         private string _fileName;
         private bool _initialWrite = true;
@@ -45,7 +46,7 @@ namespace Sharphound.Writers
             _fileName = filename;
 
             _streamWriter = new StreamWriter(filename, false, Encoding.UTF8);
-            _streamWriter.Write(FileStart);
+            _streamWriter.Write(_context.Flags.PrettyPrint ? FileStartPretty : FileStart);
         }
 
         /// <summary>
@@ -58,7 +59,15 @@ namespace Sharphound.Writers
             else
                 _initialWrite = false;
 
-            await _streamWriter.WriteAsync(string.Join(",", Queue.Select(JsonSerializer.ToJsonString)));
+            if (_context.Flags.PrettyPrint)
+            {
+                await _streamWriter.WriteAsync(string.Join(",",Queue.Select(x => JsonSerializer.PrettyPrint(JsonSerializer.Serialize(x), 2))));
+            }
+            else
+            {
+                await _streamWriter.WriteAsync(string.Join(",", Queue.Select(JsonSerializer.ToJsonString)));    
+            }
+            
             Queue.Clear();
         }
 
@@ -72,7 +81,14 @@ namespace Sharphound.Writers
                 if (!_initialWrite)
                     await _streamWriter.WriteAsync(",");
 
-                await _streamWriter.WriteAsync(string.Join(",", Queue.Select(JsonSerializer.ToJsonString)));
+                if (_context.Flags.PrettyPrint)
+                {
+                    await _streamWriter.WriteAsync(string.Join(",",Queue.Select(x => JsonSerializer.PrettyPrint(JsonSerializer.ToJsonString(x)))));
+                }
+                else
+                {
+                    await _streamWriter.WriteAsync(string.Join(",", Queue.Select(JsonSerializer.ToJsonString)));    
+                }
                 Queue.Clear();
             }
             else
@@ -80,7 +96,15 @@ namespace Sharphound.Writers
                 return;
             }
 
-            await _streamWriter.WriteAsync(@"],""meta"":");
+            if (_context.Flags.PrettyPrint)
+            {
+                await _streamWriter.WriteAsync("],\n\"meta\":");    
+            }
+            else
+            {
+                await _streamWriter.WriteAsync(@"],""meta"":");    
+            }
+            
             var meta = new MetaTag
             {
                 Count = Count,
@@ -88,8 +112,17 @@ namespace Sharphound.Writers
                 DataType = DataType,
                 Version = 4
             };
-            await _streamWriter.WriteAsync(JsonSerializer.ToJsonString(meta));
-            await _streamWriter.WriteAsync("}");
+            if (_context.Flags.PrettyPrint)
+            {
+                await _streamWriter.WriteAsync(JsonSerializer.PrettyPrint(JsonSerializer.ToJsonString(meta)));
+                await _streamWriter.WriteAsync("\n}");
+            }
+            else
+            {
+                await _streamWriter.WriteAsync(JsonSerializer.ToJsonString(meta));
+                await _streamWriter.WriteAsync("}");
+            }
+            
             await _streamWriter.FlushAsync();
             _streamWriter.Close();
         }

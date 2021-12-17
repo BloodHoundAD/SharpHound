@@ -20,5 +20,6 @@
         public bool DumpComputerStatus { get; set; }
         public bool CollectAllProperties { get; set; }
         public bool DCOnly { get; set; }
+        public bool PrettyPrint { get; set; }
     }
 }

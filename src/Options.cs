@@ -65,6 +65,9 @@ namespace Sharphound
 
         [Option(HelpText = "Password protects the zip with the specified password", Default = null)]
         public string ZipPassword { get; set; }
+        
+        [Option(HelpText = "Pretty print JSON", Default = false)]
+        public bool PrettyPrint { get; set; }
 
         // Connection options
         [Option(HelpText = "Username for LDAP", Default = null)]
