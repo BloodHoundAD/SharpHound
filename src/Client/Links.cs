@@ -17,6 +17,7 @@ namespace Sharphound.Client
 
         IContext SetSessionUserName(string overrideUserName, T context);
         IContext InitCommonLib(T context);
+        IContext GetDomainsForEnumeration(T context);
         IContext StartBaseCollectionTask(T context);
         Task<IContext> AwaitBaseRunCompletion(T context);
         IContext PrepareForLooping(T context);

@@ -15,6 +15,8 @@
 // ---------------------------------------------------- //
 
 using System;
+using System.Collections.Generic;
+using System.DirectoryServices.ActiveDirectory;
 using System.DirectoryServices.Protocols;
 using System.IO;
 using System.Linq;
@@ -165,6 +167,29 @@ namespace Sharphound
                 }
 
             CommonLib.InitializeCommonLib(context.Logger, cache);
+            return context;
+        }
+
+        public IContext GetDomainsForEnumeration(IContext context)
+        {
+            if (context.Flags.SearchForest)
+            {
+                context.Logger.LogInformation("[SearchForest] Cross-domain enumeration may result in reduced data quality");
+                var forest = context.LDAPUtils.GetForest(context.DomainName);
+                if (forest == null)
+                {
+                    context.Logger.LogError("Unable to contact forest to get domains for SearchForest");
+                    context.Flags.IsFaulted = true;
+                    return context;
+                }
+
+                context.Domains = (from Domain d in forest.Domains select d.Name).ToArray();
+                context.Logger.LogInformation("Domains for enumeration: {Domains}", JsonSerializer.ToJsonString(context.Domains));
+                return context;
+            }
+
+            var domain = context.LDAPUtils.GetDomain(context.DomainName);
+            context.Domains = new[] { domain.Name };
             return context;
         }
 
@@ -369,7 +394,8 @@ namespace Sharphound
                     NoSaveCache = options.MemCache,
                     CollectAllProperties = options.CollectAllProperties,
                     DCOnly = dconly,
-                    PrettyPrint = options.PrettyPrint
+                    PrettyPrint = options.PrettyPrint,
+                    SearchForest = options.SearchForest
                 };
 
                 var ldapOptions = new LDAPConfig
@@ -428,6 +454,7 @@ namespace Sharphound
                     return;
                 context = links.SetSessionUserName(options.OverrideUserName, context);
                 context = links.InitCommonLib(context);
+                context = links.GetDomainsForEnumeration(context);
                 context = links.StartBaseCollectionTask(context);
                 context = await links.AwaitBaseRunCompletion(context);
                 // links.StartLoopTimer(context);

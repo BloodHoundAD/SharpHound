@@ -75,29 +75,32 @@ namespace Sharphound.Producers
 
             var query = new LDAPFilter();
             query.AddComputers("(|(homedirectory=*)(scriptpath=*)(profilepath=*))");
-
-            //Request user objects with the "homedirectory", "scriptpath", or "profilepath" attributes
-            Parallel.ForEach(Context.LDAPUtils.QueryLDAP(
-                query.GetFilter(),
-                SearchScope.Subtree,
-                new[] { "homedirectory", "scriptpath", "profilepath" }, Context.DomainName), searchResult =>
+            foreach (var domain in Context.Domains)
             {
-                //Grab any properties that exist, filter out null values
-                var poss = new[]
+                //Request user objects with the "homedirectory", "scriptpath", or "profilepath" attributes
+                Parallel.ForEach(Context.LDAPUtils.QueryLDAP(
+                    query.GetFilter(),
+                    SearchScope.Subtree,
+                    new[] { "homedirectory", "scriptpath", "profilepath" }, domain), searchResult =>
                 {
-                    searchResult.GetProperty("homedirectory"), searchResult.GetProperty("scriptpath"),
-                    searchResult.GetProperty("profilepath")
-                }.Where(s => s != null);
+                    //Grab any properties that exist, filter out null values
+                    var poss = new[]
+                    {
+                        searchResult.GetProperty("homedirectory"), searchResult.GetProperty("scriptpath"),
+                        searchResult.GetProperty("profilepath")
+                    }.Where(s => s != null);
 
-                // Loop over each possibility, and grab the hostname from the path, adding it to a list
-                foreach (var s in poss)
-                {
-                    var split = s.Split('\\');
-                    if (!(split.Length >= 3)) continue;
-                    var path = split[2];
-                    paths.TryAdd(path, new byte());
-                }
-            });
+                    // Loop over each possibility, and grab the hostname from the path, adding it to a list
+                    foreach (var s in poss)
+                    {
+                        var split = s.Split('\\');
+                        if (!(split.Length >= 3)) continue;
+                        var path = split[2];
+                        paths.TryAdd(path, new byte());
+                    }
+                });
+            }
+            
 
 
             // Loop over the paths we grabbed, and resolve them to sids.

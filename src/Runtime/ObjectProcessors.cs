@@ -103,7 +103,7 @@ namespace Sharphound.Runtime
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
             {
                 var userProps = await _ldapPropertyProcessor.ReadUserProperties(entry);
-                ContextUtils.Merge(ret.Properties, userProps.Props);
+                ret.Properties = ContextUtils.Merge(ret.Properties, userProps.Props);
                 ret.HasSIDHistory = userProps.SidHistory;
                 ret.AllowedToDelegate = userProps.AllowedToDelegate;
             }
@@ -155,7 +155,7 @@ namespace Sharphound.Runtime
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
             {
                 var computerProps = await _ldapPropertyProcessor.ReadComputerProperties(entry);
-                ContextUtils.Merge(ret.Properties, computerProps.Props);
+                ret.Properties = ContextUtils.Merge(ret.Properties, computerProps.Props);
                 ret.AllowedToDelegate = computerProps.AllowedToDelegate;
                 ret.AllowedToAct = computerProps.AllowedToAct;
                 ret.HasSIDHistory = computerProps.SidHistory;
@@ -335,7 +335,7 @@ namespace Sharphound.Runtime
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
             {
                 var groupProps = LDAPPropertyProcessor.ReadGroupProperties(entry);
-                ContextUtils.Merge(ret.Properties, groupProps);
+                ret.Properties = ContextUtils.Merge(ret.Properties, groupProps);
             }
 
             return ret;
@@ -364,7 +364,7 @@ namespace Sharphound.Runtime
                 ret.Trusts = _domainTrustProcessor.EnumerateDomainTrusts(resolvedSearchResult.Domain).ToArray();
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
-                ContextUtils.Merge(ret.Properties, LDAPPropertyProcessor.ReadDomainProperties(entry));
+                ret.Properties = ContextUtils.Merge(ret.Properties, LDAPPropertyProcessor.ReadDomainProperties(entry));
 
             if ((_methods & ResolvedCollectionMethod.Container) != 0)
             {
@@ -401,7 +401,7 @@ namespace Sharphound.Runtime
             }
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
-                ContextUtils.Merge(ret.Properties, LDAPPropertyProcessor.ReadGPOProperties(entry));
+                ret.Properties = ContextUtils.Merge(ret.Properties, LDAPPropertyProcessor.ReadGPOProperties(entry));
 
             return ret;
         }
@@ -426,7 +426,7 @@ namespace Sharphound.Runtime
             }
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
-                ContextUtils.Merge(ret.Properties, LDAPPropertyProcessor.ReadOUProperties(entry));
+                ret.Properties = ContextUtils.Merge(ret.Properties, LDAPPropertyProcessor.ReadOUProperties(entry));
 
             if ((_methods & ResolvedCollectionMethod.Container) != 0)
             {
@@ -467,6 +467,12 @@ namespace Sharphound.Runtime
                     .ToArray();
                 ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
             }
+
+            if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
+            {
+                //ret.Properties = ContextUtils.Merge(ret.Properties, LDAPPropertyProcessor.)
+            }
+                
 
             return ret;
         }
