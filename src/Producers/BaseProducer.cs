@@ -101,6 +101,12 @@ namespace Sharphound.Producers
                     query = query.AddUsers(CommonFilters.NeedsSPN);
                     props.AddRange(CommonProperties.SPNTargetProps);
                 }
+
+                if ((methods & ResolvedCollectionMethod.GPOLocalGroup) != 0)
+                {
+                    query = query.AddOUs();
+                    props.AddRange(CommonProperties.GPOLocalGroupProps);
+                }
             }
 
             if (Context.LdapFilter != null) query.AddFilter(Context.LdapFilter, true);
