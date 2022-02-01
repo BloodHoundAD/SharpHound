@@ -112,6 +112,7 @@ namespace Sharphound.Writers
                 DataType = DataType,
                 Version = 4
             };
+            
             if (_context.Flags.PrettyPrint)
             {
                 await _streamWriter.WriteAsync(JsonSerializer.PrettyPrint(JsonSerializer.ToJsonString(meta)));

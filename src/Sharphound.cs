@@ -83,6 +83,7 @@ namespace Sharphound
         /// <returns></returns>
         public IContext Initialize(IContext context, LDAPConfig options)
         {
+            context.Logger.LogTrace("Entering initialize link");
             //We've successfully parsed arguments, lets do some options post-processing.
             var currentTime = DateTime.Now;
             //var padString = new string('-', initString.Length);
@@ -109,12 +110,15 @@ namespace Sharphound
 
             if (context.LoopInterval == null || context.LoopInterval == TimeSpan.Zero)
                 context.LoopInterval = TimeSpan.FromSeconds(30);
+            
+            context.Logger.LogTrace("Exiting initialize link");
 
             return context;
         }
 
         public IContext TestConnection(IContext context)
         {
+            context.Logger.LogTrace("Entering TestConnection link");
             //2. TestConnection()
             // Initial LDAP connection test. Search for the well known administrator SID to make sure we can connect successfully.
             var result =
@@ -133,31 +137,42 @@ namespace Sharphound
             context.Flags.NeedsCancellation = false;
             context.Timer = null;
             context.LoopEnd = DateTime.Now;
+            
+            context.Logger.LogTrace("Exiting TestConnection link");
 
             return context;
         }
 
         public IContext SetSessionUserName(string overrideUserName, IContext context)
         {
+            context.Logger.LogTrace("Entering SetSessionUserName");
             //3. SetSessionUserName()
             // Set the current user name for session collection.
             context.CurrentUserName = overrideUserName ?? WindowsIdentity.GetCurrent().Name.Split('\\')[1];
 
+            context.Logger.LogTrace("Exiting SetSessionUserName");
             return context;
         }
 
         public IContext InitCommonLib(IContext context)
         {
+            context.Logger.LogTrace("Entering InitCommonLib");
             //4. Create our Cache/Initialize Common Lib
+            context.Logger.LogTrace("Getting cache path");
             var path = context.GetCachePath();
+            context.Logger.LogTrace("Cache Path: {Path}", path);
             Cache cache;
             if (!File.Exists(path))
+            {
+                context.Logger.LogTrace("Cache file does not exist");
                 cache = null;
+            }
             else
                 try
                 {
+                    context.Logger.LogTrace("Loading cache from disk");
                     var bytes = File.ReadAllBytes(path);
-                    cache = JsonSerializer.Deserialize<Cache>(bytes, StandardResolver.AllowPrivate);
+                    cache = JsonSerializer.Deserialize<Cache>(bytes, DynamicGenericResolver.Instance);
                     context.Logger.LogInformation("Loaded cache with stats: {stats}", cache.GetCacheStats());
                 }
                 catch (Exception e)
@@ -167,11 +182,13 @@ namespace Sharphound
                 }
 
             CommonLib.InitializeCommonLib(context.Logger, cache);
+            context.Logger.LogTrace("Exiting InitCommonLib");
             return context;
         }
 
         public IContext GetDomainsForEnumeration(IContext context)
         {
+            context.Logger.LogTrace("Entering GetDomainsForEnumeration");
             if (context.Flags.SearchForest)
             {
                 context.Logger.LogInformation("[SearchForest] Cross-domain enumeration may result in reduced data quality");
@@ -190,15 +207,18 @@ namespace Sharphound
 
             var domain = context.LDAPUtils.GetDomain(context.DomainName);
             context.Domains = new[] { domain.Name };
+            context.Logger.LogTrace("Exiting GetDomainsForEnumeration");
             return context;
         }
 
         public IContext StartBaseCollectionTask(IContext context)
         {
+            context.Logger.LogTrace("Entering StartBaseCollectionTask");
             context.Logger.LogInformation("Flags: {flags}", context.ResolvedCollectionMethods.GetIndividualFlags());
             //5. Start the collection
             var task = new CollectionTask(context);
             context.CollectionTask = task.StartCollection();
+            context.Logger.LogTrace("Exiting StartBaseCollectionTask");
             return context;
         }
 

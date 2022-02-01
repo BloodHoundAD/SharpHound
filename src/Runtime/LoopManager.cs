@@ -106,9 +106,15 @@ namespace Sharphound.Runtime
                     StreamUtils.Copy(fileStream, zipStream, buffer);
                 }
 
-                zipStream.CloseEntry();
-
-                File.Delete(entry);
+                try
+                {
+                    zipStream.CloseEntry();
+                    File.Delete(entry);
+                }
+                catch (Exception e)
+                {
+                    _context.Logger.LogError(e, "Error adding {Filename} to the zip", entry);
+                }
             }
 
             return resolvedFileName;
