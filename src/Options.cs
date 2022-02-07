@@ -122,13 +122,13 @@ namespace Sharphound
         public bool CollectAllProperties { get; set; }
 
         //Loop Options
-        [Option('l', HelpText = "Loop computer collection")]
+        [Option('l', "Loop", HelpText = "Loop computer collection")]
         public bool Loop { get; set; }
 
-        [Option("Loop duration (Defaults to 2 hours)")]
+        [Option(HelpText="Loop duration (Defaults to 2 hours)")]
         public TimeSpan LoopDuration { get; set; }
 
-        [Option("Delay between loops")] public TimeSpan LoopInterval { get; set; }
+        [Option(HelpText="Delay between loops")] public TimeSpan LoopInterval { get; set; }
 
         //Misc Options
         [Option(HelpText = "Interval in which to display status in milliseconds", Default = 30000)]
