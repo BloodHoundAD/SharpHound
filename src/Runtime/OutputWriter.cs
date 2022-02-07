@@ -64,7 +64,10 @@ namespace Sharphound.Runtime
         private void CloseOutput()
         {
             PrintStatus();
+            _statusTimer.Stop();
+            _runTimer.Stop();
             _context.Logger.LogInformation("Enumeration finished in {RunTime}", _runTimer.Elapsed);
+            _statusTimer.Dispose();
         }
 
         private void PrintStatus()
