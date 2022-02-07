@@ -74,7 +74,7 @@ namespace Sharphound.Producers
 
                 if ((methods & ResolvedCollectionMethod.Group) != 0)
                 {
-                    query = query.AddGroups();
+                    query = query.AddGroups().AddPrimaryGroups();
                     props.AddRange(CommonProperties.GroupResolutionProps);
                 }
 
