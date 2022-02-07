@@ -14,16 +14,13 @@ namespace Sharphound.Runtime
     public class LoopManager
     {
         private readonly IContext _context;
-        private readonly ResolvedCollectionMethod _methods;
         private int _loopCount = 0;
-        private readonly DateTime _loopEndTime;
+        private DateTime _loopEndTime;
         private readonly List<string> _filenames;
 
         public LoopManager(IContext context)
         {
             _context = context;
-            _methods = _context.ResolvedCollectionMethods.GetLoopCollectionMethods();
-            _loopEndTime = DateTime.Now.Add(_context.LoopDuration);
             _filenames = new List<string>();
         }
 
@@ -47,11 +44,16 @@ namespace Sharphound.Runtime
             {
                 _context.Logger.LogInformation("Skipping loop because cancellation was requested");
             }
+            
+            _loopEndTime = DateTime.Now.Add(_context.LoopDuration);
+            
+            _context.Logger.LogInformation("Looping scheduled to stop at {EndTime}", _loopEndTime);
 
             while (!_context.CancellationTokenSource.IsCancellationRequested)
             {
                 _loopCount++;
                 var time = DateTime.Now;
+                _context.Logger.LogInformation("{Time} - {EndTime}", time, _loopEndTime);
                 if (time >= _loopEndTime)
                 {
                     break;

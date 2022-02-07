@@ -20,9 +20,9 @@ namespace Sharphound.Client
         IContext GetDomainsForEnumeration(T context);
         IContext StartBaseCollectionTask(T context);
         Task<IContext> AwaitBaseRunCompletion(T context);
-        IContext PrepareForLooping(T context);
         IContext StartLoopTimer(T context);
         IContext StartLoop(T context);
+        Task<IContext> AwaitLoopCompletion(T context);
         IContext DisposeTimer(T context);
         IContext SaveCacheFile(T context);
         IContext Finish(T context);

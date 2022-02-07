@@ -21,8 +21,8 @@ using System.DirectoryServices.Protocols;
 using System.IO;
 using System.Linq;
 using System.Security.Principal;
+using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using CommandLine;
 using Microsoft.Extensions.Logging;
 using Sharphound.Client;
@@ -30,6 +30,7 @@ using Sharphound.Runtime;
 using SharpHoundCommonLib;
 using Utf8Json;
 using Utf8Json.Resolvers;
+using Timer = System.Timers.Timer;
 
 namespace Sharphound
 {
@@ -102,13 +103,13 @@ namespace Sharphound
             //Check some loop options
             if (!context.Flags.Loop) return context;
             //If loop is set, ensure we actually set options properly
-            if (context.LoopDuration == null || context.LoopDuration == TimeSpan.Zero)
+            if (context.LoopDuration == TimeSpan.Zero)
             {
                 context.Logger.LogTrace("Loop specified without a duration. Defaulting to 2 hours!");
                 context.LoopDuration = TimeSpan.FromHours(2);
             }
 
-            if (context.LoopInterval == null || context.LoopInterval == TimeSpan.Zero)
+            if (context.LoopInterval == TimeSpan.Zero)
                 context.LoopInterval = TimeSpan.FromSeconds(30);
             
             context.Logger.LogTrace("Exiting initialize link");
@@ -172,7 +173,7 @@ namespace Sharphound
                 {
                     context.Logger.LogTrace("Loading cache from disk");
                     var bytes = File.ReadAllBytes(path);
-                    cache = JsonSerializer.Deserialize<Cache>(bytes, DynamicGenericResolver.Instance);
+                    cache = JsonSerializer.Deserialize<Cache>(bytes, Utf8JsonConfiguration.Resolver);
                     context.Logger.LogInformation("Loaded cache with stats: {stats}", cache.GetCacheStats());
                 }
                 catch (Exception e)
@@ -229,9 +230,9 @@ namespace Sharphound
             return context;
         }
 
-        public IContext PrepareForLooping(IContext context)
+        public async Task<IContext> AwaitLoopCompletion(IContext context)
         {
-            context.ResolvedCollectionMethods = context.ResolvedCollectionMethods.GetLoopCollectionMethods();
+            await context.CollectionTask;
             return context;
         }
 
@@ -262,85 +263,24 @@ namespace Sharphound
             stream.Write(serialized, 0, serialized.Length);
             return context;
         }
-
-
+        
         public IContext StartLoop(IContext context)
         {
-            // 13.Start looping if specified
-            // if (context.Flags.Loop)
-            // {
-            //     if (context.CancellationTokenSource.IsCancellationRequested)
-            //     {
-            //         context.Logger.LogTrace("Skipping looping because loop duration has already passed");
-            //     }
-            //     else
-            //     {
-            //         context.Logger.LogTrace(string.Empty);
-            //         context.Logger.LogTrace("Waiting 30 seconds before starting loops");
-            //         try
-            //         {
-            //             Task.Delay(TimeSpan.FromSeconds(30), context.CancellationTokenSource.Token).Wait();
-            //         }
-            //         catch (TaskCanceledException)
-            //         {
-            //             context.Logger.LogTrace("Skipped wait because loop duration has completed!");
-            //         }
-            //
-            //         if (!context.CancellationTokenSource.IsCancellationRequested)
-            //         {
-            //             context.Logger.LogTrace(string.Empty);
-            //             context.Logger.LogTrace($"Loop Enumeration Methods: {context.CollectionMethods}");
-            //             context.Logger.LogTrace(
-            //                 $"Looping scheduled to stop at {context.LoopEnd.ToLongTimeString()} on {context.LoopEnd.ToShortDateString()}");
-            //             context.Logger.LogTrace(string.Empty);
-            //         }
-            //
-            //         var count = 0;
-            //         while (!context.CancellationTokenSource.IsCancellationRequested)
-            //         {
-            //             count++;
-            //             var currentTime = DateTime.Now;
-            //             context.Logger.LogTrace(
-            //                 $"Starting loop #{count} at {currentTime.ToShortTimeString()} on {currentTime.ToShortDateString()}");
-            //             context.StartNewRun();
-            //             context.CollectionTask = PipelineBuilder.GetBasePipelineForDomain(context);
-            //             context.CollectionTask.Wait();
-            //             OutputTasks.CompleteOutput(context).Wait();
-            //
-            //             if (!context.CancellationTokenSource.Token.IsCancellationRequested)
-            //             {
-            //                 context.Logger.LogTrace(string.Empty);
-            //                 context.Logger.LogTrace(
-            //                     $"Waiting {context.LoopInterval?.TotalSeconds} seconds for next loop");
-            //                 context.Logger.LogTrace(string.Empty);
-            //                 try
-            //                 {
-            //                     Task.Delay((TimeSpan)context.LoopInterval, context.CancellationTokenSource.Token)
-            //                         .Wait();
-            //                 }
-            //                 catch (TaskCanceledException)
-            //                 {
-            //                     context.Logger.LogTrace("Skipping wait as loop duration has expired");
-            //                 }
-            //             }
-            //         }
-            //
-            //         if (count > 0)
-            //             context.Logger.LogTrace($"Looping finished! Looped a total of {count} times");
-            //
-            //         //Special function to grab all the zip files created by looping and collapse them into a single file
-            //         OutputTasks.CollapseLoopZipFiles(context).Wait();
-            //     }
-            // }
+            if (!context.Flags.Loop || context.CancellationTokenSource.IsCancellationRequested) return context;
+
+            context.ResolvedCollectionMethods = context.ResolvedCollectionMethods.GetLoopCollectionMethods();
+            context.Logger.LogInformation("Creating loop manager with methods {Methods}", context.ResolvedCollectionMethods);
+            var manager = new LoopManager(context);
+            context.Logger.LogInformation("Starting looping");
+            context.CollectionTask = manager.StartLooping();
 
             return context;
         }
 
         public IContext StartLoopTimer(IContext context)
         {
-            //4. Start Loop Timer
             //If loop is set, set up our timer for the loop now
-            if (!context.Flags.Loop) return context;
+            if (!context.Flags.Loop || context.CancellationTokenSource.IsCancellationRequested) return context;
 
             context.LoopEnd = context.LoopEnd.AddMilliseconds(context.LoopDuration.TotalMilliseconds);
             context.Timer = new Timer();
@@ -355,21 +295,6 @@ namespace Sharphound
             context.Timer.AutoReset = false;
             context.Timer.Start();
 
-            return context;
-        }
-
-        public IContext CancellationCheck(IContext context)
-        {
-            // 12. 
-            if (context.CancellationTokenSource.IsCancellationRequested) context.CancellationTokenSource.Cancel();
-            return context;
-        }
-
-
-        public IContext MarkRunComplete(IContext context)
-        {
-            // 11. Mark our initial run as complete, signalling that we're now in the looping phase
-            context.Flags.InitialCompleted = true;
             return context;
         }
     }
@@ -461,6 +386,15 @@ namespace Sharphound
                     ZipPassword = options.ZipPassword,
                     IsFaulted = false
                 };
+                
+                var cancellationTokenSource = new CancellationTokenSource();
+                context.CancellationTokenSource = cancellationTokenSource;
+                
+                // Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs eventArgs)
+                // {
+                //     eventArgs.Cancel = true;
+                //     cancellationTokenSource.Cancel();
+                // };
 
                 // Create new chain links
                 Links<IContext> links = new SharpLinks();
@@ -477,9 +411,9 @@ namespace Sharphound
                 context = links.GetDomainsForEnumeration(context);
                 context = links.StartBaseCollectionTask(context);
                 context = await links.AwaitBaseRunCompletion(context);
-                // links.StartLoopTimer(context);
-                // links.StartLoop(context);
-                // links.DisposeTimer(context);
+                context = links.StartLoopTimer(context);
+                context = links.StartLoop(context);
+                context = await links.AwaitLoopCompletion(context);
                 context = links.SaveCacheFile(context);
                 links.Finish(context);
             });
