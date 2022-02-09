@@ -91,10 +91,6 @@ namespace Sharphound.Writers
                 }
                 Queue.Clear();
             }
-            else
-            {
-                return;
-            }
 
             if (_context.Flags.PrettyPrint)
             {

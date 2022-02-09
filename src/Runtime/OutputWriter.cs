@@ -167,11 +167,10 @@ namespace Sharphound.Runtime
                 var fi = new FileInfo(entry);
                 var zipEntry = new ZipEntry(fi.Name) { DateTime = fi.LastWriteTime, Size = fi.Length };
                 zipStream.PutNextEntry(zipEntry);
-
-                var buffer = new byte[4096];
+                
                 using (var fileStream = File.OpenRead(entry))
                 {
-                    StreamUtils.Copy(fileStream, zipStream, buffer);
+                    StreamUtils.Copy(fileStream, zipStream, new byte[4096]);
                 }
 
                 try
