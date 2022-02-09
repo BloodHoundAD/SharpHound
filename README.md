@@ -109,7 +109,7 @@ dotnet build
 
   --statusinterval           (Default: 30000) Interval in which to display status in milliseconds
 
-  -v                         (Default: 2) Enable verbose output
+  -v                         (Default: 2) Enable verbose output. Lower is more verbose
 
   --help                     Display this help screen.
 
