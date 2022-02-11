@@ -303,7 +303,7 @@ namespace Sharphound
 
     #region Console Entrypoint
 
-    internal class Program
+    public class Program
     {
         public static async Task Main(string[] args)
         {
