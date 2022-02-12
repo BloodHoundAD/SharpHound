@@ -122,16 +122,12 @@ namespace Sharphound
             context.Logger.LogTrace("Entering TestConnection link");
             //2. TestConnection()
             // Initial LDAP connection test. Search for the well known administrator SID to make sure we can connect successfully.
-            var result =
-                context.LDAPUtils.QueryLDAP("(objectclass=domain)", SearchScope.Subtree, new[] { "objectsid" })
-                    .DefaultIfEmpty(null).FirstOrDefault();
+            var result = context.LDAPUtils.TestLDAPConfig(context.DomainName);
 
-            // If we get nothing back from LDAP, something is wrong
-            if (result == null)
+            if (!result)
             {
-                context.Logger.LogError("LDAP Connection Test Failed. Check if you're in a domain context!");
+                context.Logger.LogError("Unable to connect to LDAP, verify your credentials");
                 context.Flags.IsFaulted = true;
-                return context;
             }
 
             context.Flags.InitialCompleted = false;
@@ -206,8 +202,14 @@ namespace Sharphound
                 return context;
             }
 
-            var domain = context.LDAPUtils.GetDomain(context.DomainName);
-            context.Domains = new[] { domain.Name };
+            var domain = context.LDAPUtils.GetDomain(context.DomainName)?.Name ?? context.DomainName;
+            if (domain == null)
+            {
+                context.Logger.LogError("unable to resolve a domain to use, manually specify one or check spelling");
+                context.Flags.IsFaulted = true;
+            }
+            
+            context.Domains = new[] { domain };
             context.Logger.LogTrace("Exiting GetDomainsForEnumeration");
             return context;
         }
@@ -409,6 +411,8 @@ namespace Sharphound
                 context = links.SetSessionUserName(options.OverrideUserName, context);
                 context = links.InitCommonLib(context);
                 context = links.GetDomainsForEnumeration(context);
+                if (context.Flags.IsFaulted)
+                    return;
                 context = links.StartBaseCollectionTask(context);
                 context = await links.AwaitBaseRunCompletion(context);
                 context = links.StartLoopTimer(context);

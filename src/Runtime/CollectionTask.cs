@@ -78,7 +78,7 @@ namespace Sharphound.Runtime
             await Task.WhenAll(_taskPool);
             _log.LogInformation("Consumers finished, closing output channel");
 
-            await foreach (var wkp in _context.LDAPUtils.GetWellKnownPrincipalOutput())
+            foreach (var wkp in _context.LDAPUtils.GetWellKnownPrincipalOutput(_context.DomainName))
                 await _outputChannel.Writer.WriteAsync(wkp);
 
             _outputChannel.Writer.Complete();
