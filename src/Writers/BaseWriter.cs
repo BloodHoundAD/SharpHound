@@ -7,7 +7,7 @@ namespace Sharphound.Writers
     {
         protected readonly string DataType;
         protected readonly List<T> Queue;
-        private bool _fileCreated;
+        protected bool FileCreated;
         protected int Count;
         protected bool NoOp;
 
@@ -21,10 +21,10 @@ namespace Sharphound.Writers
         {
             if (NoOp)
                 return;
-            if (!_fileCreated)
+            if (!FileCreated)
             {
                 CreateFile();
-                _fileCreated = true;
+                FileCreated = true;
             }
 
             Queue.Add(item);

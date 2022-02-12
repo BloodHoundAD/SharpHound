@@ -76,11 +76,16 @@ namespace Sharphound.Writers
         /// </summary>
         internal override async Task FlushWriter()
         {
+            if (!FileCreated)
+                return;
+            
             if (Queue.Count > 0)
             {
                 if (!_initialWrite)
+                {
                     await _streamWriter.WriteAsync(",");
-
+                }
+                
                 if (_context.Flags.PrettyPrint)
                 {
                     await _streamWriter.WriteAsync(string.Join(",",Queue.Select(x => JsonSerializer.PrettyPrint(JsonSerializer.ToJsonString(x)))));
@@ -91,6 +96,7 @@ namespace Sharphound.Writers
                 }
                 Queue.Clear();
             }
+            
 
             if (_context.Flags.PrettyPrint)
             {
@@ -130,7 +136,7 @@ namespace Sharphound.Writers
         /// <returns></returns>
         internal string GetFilename()
         {
-            return _fileName;
+            return FileCreated ? _fileName : null;
         }
     }
 }
