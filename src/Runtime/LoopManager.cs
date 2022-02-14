@@ -59,6 +59,7 @@ namespace Sharphound.Runtime
                     break;
                 }
                 
+                _context.UpdateLoopTime();
                 _context.Logger.LogInformation("Starting loop {LoopCount} at {Time} on {Date}", _loopCount, time.ToShortTimeString(), time.ToShortDateString());
                 var task = new CollectionTask(_context).StartCollection();
 

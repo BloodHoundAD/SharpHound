@@ -16,7 +16,7 @@ namespace Sharphound
     /// </summary>
     public sealed class BaseContext : IDisposable, IContext
     {
-        private static readonly string CurrentLoopTime = $"{DateTime.Now:yyyyMMddHHmmss}";
+        private static string CurrentLoopTime = $"{DateTime.Now:yyyyMMddHHmmss}";
         private static readonly Lazy<Random> RandomGen = new();
 
         private bool disposedValue;
@@ -58,6 +58,11 @@ namespace Sharphound
         public ILDAPUtils LDAPUtils { get; set; }
         public Task CollectionTask { get; set; }
         public Flags Flags { get; set; }
+
+        public void UpdateLoopTime()
+        {
+            CurrentLoopTime = $"{DateTime.Now:yyyyMMddHHmmss}";
+        }
 
         public async Task DoDelay()
         {
