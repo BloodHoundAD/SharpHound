@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    run-on: windows-latest
+    runs-on: windows-latest
     defaults:
       run:
         shell: bash
