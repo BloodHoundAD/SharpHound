@@ -1,0 +1,45 @@
+name: Build
+
+on:
+  push:
+    branches: [ dev ]
+  pull_request: [ dev ]
+
+jobs:
+  build:
+    run-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+
+    name: Build
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+
+      - name: Restore Dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c Release
+
+      - name: Zip
+        if: "! startsWith(github.event_name, 'pull_request')"
+        run: 7z a -tzip -mx9 SharpHound.zip bin/Release/net462
+
+      - name: Update Rolling Release
+        if: "! startsWith(github.event_name, 'pull_request')"
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Rolling Release (unstable)
+          tag_name: rolling
+          prerelease: true
+          files: SharpHound.zip
+          body: |
+            Rolling release of SharpHound compiled from source (${{ github.sha }})
+            This is automatically kept up-to-date with the `${{ github.ref_name }}` ${{ github.ref_type }}.
