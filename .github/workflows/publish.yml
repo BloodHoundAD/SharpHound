@@ -25,12 +25,8 @@ jobs:
       - name: Restore Dependencies
         run: dotnet restore
 
-      - name: Set Version
-        id: set_version
-        run: INPUT=${{ github.ref_name }} echo "::set-output name=version::${INPUT:1}"
-
       - name: Build
-        run: dotnet build -c Release /p:Version=${{ steps.set_version.outputs.version }}
+        run: 'VERSION="${{ github.ref_name }}" dotnet build -c Release /p:Version="${VERSION:1}"'
 
       - name: Zip
         run: 7z a -tzip -mx9 SharpHound-${{ github.ref_name }}.zip bin/Release/net462
