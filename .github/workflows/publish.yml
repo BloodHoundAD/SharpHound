@@ -25,11 +25,15 @@ jobs:
       - name: Restore Dependencies
         run: dotnet restore
 
+      - name: Set Version
+        id: set_version
+        run: INPUT=${{ github.ref_name }} echo "::set-output name=version::${INPUT:1}"
+
       - name: Build
-        run: dotnet build -c Release
+        run: dotnet build -c Release /p:Version=${{ steps.set_version.outputs.version }}
 
       - name: Zip
-        run: 7z a -tzip -mx9 SharpHound.zip bin/Release/net462
+        run: 7z a -tzip -mx9 SharpHound-${{ github.ref_name }}.zip bin/Release/net462
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
