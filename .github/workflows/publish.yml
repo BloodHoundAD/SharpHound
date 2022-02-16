@@ -28,9 +28,7 @@ jobs:
       - name: Build
         run: |
           VERSION=${{ github.ref_name }}
-          pwd
-          ls
-          dotnet build -c Release /p:Version=${VERSION:1} Sharphound.sln
+          dotnet build -c Release -p:Version=${VERSION:1}
 
       - name: Zip
         run: 7z a -tzip -mx9 SharpHound-${{ github.ref_name }}.zip bin/Release/net462
