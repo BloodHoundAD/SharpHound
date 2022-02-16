@@ -1,0 +1,37 @@
+name: Publish
+
+on:
+  push: 
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+
+    name: Build
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+
+      - name: Restore Dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c Release
+
+      - name: Zip
+        run: 7z a -tzip -mx9 SharpHound.zip bin/Release/net462
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: SharpHound.zip
