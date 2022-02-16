@@ -32,7 +32,7 @@ jobs:
           INPUT=${{ github.ref_name }} echo "::set-output name=VERSION::${INPUT:1}"
 
       - name: Build
-        run: dotnet build -c Release /p:Version=${{ steps.set_version.outputs.version }}
+        run: dotnet build -c Release /p:Version=${{ steps.set_version.outputs.VERSION }}
 
       - name: Zip
         run: 7z a -tzip -mx9 SharpHound-${{ github.ref_name }}.zip bin/Release/net462
