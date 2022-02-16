@@ -48,7 +48,7 @@ jobs:
           name: Rolling Release (unstable)
           tag_name: rolling
           prerelease: true
-          files: SharpHound.zip
+          files: SharpHound${{ matrix.release.suffix }}.zip
           body: |
             Rolling release of SharpHound compiled from source (${{ github.sha }})
             This is automatically kept up-to-date with the `${{ github.ref_name }}` ${{ github.ref_type }}.
