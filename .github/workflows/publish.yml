@@ -39,7 +39,7 @@ jobs:
           dotnet build -c ${{ matrix.release.type }} -p:Version=${VERSION:1}
 
       - name: Zip
-        run: 7z a -tzip -mx9 SharpHound-${{ github.ref_name }}${{ matrix.release.suffix }}.zip $PWD/bin/Release/net462/*
+        run: 7z a -tzip -mx9 SharpHound-${{ github.ref_name }}${{ matrix.release.suffix }}.zip $PWD/bin/${{ matrix.release.type }}/net462/*
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
