@@ -12,7 +12,15 @@ jobs:
       run:
         shell: bash
 
-    name: Build
+    strategy:
+      matrix:
+        release:
+          - type: Debug
+            suffix: '-debug'
+          - type: Release
+            suffix: ''
+
+    name: Build (${{ matrix.release.type }})
 
     steps:
       - uses: actions/checkout@v2
@@ -28,12 +36,12 @@ jobs:
       - name: Build
         run: |
           VERSION=${{ github.ref_name }}
-          dotnet build -c Release -p:Version=${VERSION:1}
+          dotnet build -c ${{ matrix.release.type }} -p:Version=${VERSION:1}
 
       - name: Zip
-        run: 7z a -tzip -mx9 SharpHound-${{ github.ref_name }}.zip bin/Release/net462
+        run: 7z a -tzip -mx9 SharpHound-${{ github.ref_name }}${{ matrix.release.suffix }}.zip $PWD/bin/Release/net462/*
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
         with:
-          files: SharpHound-${{ github.ref_name }}.zip
+          files: SharpHound-${{ github.ref_name }}${{ matrix.release.suffix }}.zip
