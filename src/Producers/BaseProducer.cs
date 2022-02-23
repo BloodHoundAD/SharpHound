@@ -43,7 +43,10 @@ namespace Sharphound.Producers
                     props.AddRange(CommonProperties.ContainerProps);
 
                 if ((methods & ResolvedCollectionMethod.Group) != 0)
+                {
                     props.AddRange(CommonProperties.GroupResolutionProps);
+                    query = query.AddPrimaryGroups();
+                }
 
                 if ((methods & ResolvedCollectionMethod.ACL) != 0) props.AddRange(CommonProperties.ACLProps);
 
