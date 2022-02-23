@@ -41,6 +41,7 @@ namespace Sharphound.Producers
                         continue;
 
                     await Channel.Writer.WriteAsync(searchResult, cancellationToken);
+                    Context.Logger.LogTrace("Producer wrote {DistinguishedName} to channel", searchResult.DistinguishedName);
                 }
             }
             
