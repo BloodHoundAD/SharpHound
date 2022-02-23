@@ -14,12 +14,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="CommandLineParser" Version="2.9.0-preview1" />
-        <PackageReference Include="Fody" Version="6.6.0">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        <PackageReference Include="CommandLineParser" Version="2.8.0" />
+        <PackageReference Include="Costura.Fody" Version="5.7.0">
+          <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="ILMerge.Fody" Version="1.22.0" PrivateAssets="all" />
+        <PackageReference Include="Fody" Version="6.6.0">
+          <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
         <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="5.0.0" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
         <PackageReference Include="SharpHoundCommon" Version="2.0.12" />
@@ -37,6 +38,4 @@
         <Reference Include="System.DirectoryServices.Protocols" />
         <Reference Include="System.IO.Compression" />
     </ItemGroup>
-
-
 </Project>
