@@ -13,7 +13,15 @@ jobs:
       run:
         shell: bash
 
-    name: Build
+    strategy:
+      matrix:
+        release:
+          - type: Debug
+            suffix: '-debug'
+          - type: Release
+            suffix: ''
+
+    name: Build (${{ matrix.release.type }})
 
     steps:
       - uses: actions/checkout@v2
@@ -27,11 +35,11 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        run: dotnet build -c Release
+        run: dotnet build -c ${{ matrix.release.type }} -p:Version=0.0.0-rolling+${{ github.sha }}
 
       - name: Zip
         if: "! startsWith(github.event_name, 'pull_request')"
-        run: 7z a -tzip -mx9 SharpHound.zip bin/Release/net462
+        run: 7z a -tzip -mx9 SharpHound${{ matrix.release.suffix }}.zip $PWD/bin/${{ matrix.release.type }}/net462/*
 
       - name: Update Rolling Release
         if: "! startsWith(github.event_name, 'pull_request')"
@@ -40,7 +48,7 @@ jobs:
           name: Rolling Release (unstable)
           tag_name: rolling
           prerelease: true
-          files: SharpHound.zip
+          files: SharpHound${{ matrix.release.suffix }}.zip
           body: |
             Rolling release of SharpHound compiled from source (${{ github.sha }})
             This is automatically kept up-to-date with the `${{ github.ref_name }}` ${{ github.ref_type }}.
