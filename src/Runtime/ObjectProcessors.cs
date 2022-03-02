@@ -85,6 +85,7 @@ namespace Sharphound.Runtime
             ret.Properties.Add("name", resolvedSearchResult.DisplayName);
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
+            ret.Properties.Add("highvalue", false);
 
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {
@@ -136,6 +137,7 @@ namespace Sharphound.Runtime
             ret.Properties.Add("name", resolvedSearchResult.DisplayName);
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
+            ret.Properties.Add("highvalue", false);
 
             var hasLaps = entry.HasLAPS();
             ret.Properties.Add("haslaps", hasLaps);
@@ -320,6 +322,7 @@ namespace Sharphound.Runtime
             ret.Properties.Add("name", resolvedSearchResult.DisplayName);
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
+            ret.Properties.Add("highvalue", IsHighValueGroup(resolvedSearchResult.ObjectId));
 
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {
@@ -341,6 +344,30 @@ namespace Sharphound.Runtime
             return ret;
         }
 
+        private bool IsHighValueGroup(string objectId)
+        {
+            // TODO: replace w/ a more definitive/centralized list
+            var suffixes = new string []
+            {
+                "-512",
+                "-516",
+                "-519",
+                "S-1-5-32-544",
+                "S-1-5-32-548",
+                "S-1-5-32-549",
+                "S-1-5-32-550",
+                "S-1-5-32-551",
+            };
+            foreach (var suffix in suffixes)
+            {
+                if (objectId.EndsWith(suffix))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private async Task<Domain> ProcessDomainObject(ISearchResultEntry entry,
             ResolvedSearchResult resolvedSearchResult)
         {
@@ -353,6 +380,7 @@ namespace Sharphound.Runtime
             ret.Properties.Add("name", resolvedSearchResult.DisplayName);
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
+            ret.Properties.Add("highvalue", true);
 
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {
@@ -393,6 +421,7 @@ namespace Sharphound.Runtime
             ret.Properties.Add("name", resolvedSearchResult.DisplayName);
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
+            ret.Properties.Add("highvalue", false);
 
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {
@@ -418,6 +447,7 @@ namespace Sharphound.Runtime
             ret.Properties.Add("name", resolvedSearchResult.DisplayName);
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
+            ret.Properties.Add("highvalue", false);
 
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {
@@ -457,6 +487,7 @@ namespace Sharphound.Runtime
             ret.Properties.Add("name", resolvedSearchResult.DisplayName);
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
+            ret.Properties.Add("highvalue", false);
 
             if ((_methods & ResolvedCollectionMethod.Container) != 0)
                 ret.ChildObjects = _containerProcessor.GetContainerChildObjects(entry.DistinguishedName).ToArray();
