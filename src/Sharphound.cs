@@ -85,6 +85,7 @@ namespace Sharphound
         public IContext Initialize(IContext context, LDAPConfig options)
         {
             context.Logger.LogTrace("Entering initialize link");
+            CommonLib.ReconfigureLogging(context.Logger);
             //We've successfully parsed arguments, lets do some options post-processing.
             var currentTime = DateTime.Now;
             //var padString = new string('-', initString.Length);
@@ -351,7 +352,8 @@ namespace Sharphound
                 {
                     Port = options.LDAPPort,
                     DisableSigning = options.DisableSigning,
-                    SSL = options.SecureLDAP
+                    SSL = options.SecureLDAP,
+                    AuthType = AuthType.Negotiate
                 };
 
                 if (options.DomainController != null) ldapOptions.Server = options.DomainController;
