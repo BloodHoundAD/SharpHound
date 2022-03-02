@@ -9,7 +9,7 @@
         public bool IsFaulted { get; set; }
         public bool NoOutput { get; set; }
         public bool RandomizeFilenames { get; set; }
-        public bool NoSaveCache { get; set; }
+        public bool MemCache { get; set; }
         public bool NoZip { get; set; }
         public bool InvalidateCache { get; set; }
         public bool SecureLDAP { get; set; }

@@ -257,6 +257,8 @@ namespace Sharphound
 
         public IContext SaveCacheFile(IContext context)
         {
+            if (context.Flags.MemCache)
+                return context;
             // 15. Program exit started. Save the cache file
             var cache = Cache.GetCacheInstance();
             var serialized = JsonSerializer.Serialize(cache, StandardResolver.AllowPrivate);
@@ -338,7 +340,7 @@ namespace Sharphound
                     NoOutput = false,
                     Stealth = options.Stealth,
                     RandomizeFilenames = options.RandomFileNames,
-                    NoSaveCache = options.MemCache,
+                    MemCache = options.MemCache,
                     CollectAllProperties = options.CollectAllProperties,
                     DCOnly = dconly,
                     PrettyPrint = options.PrettyPrint,
