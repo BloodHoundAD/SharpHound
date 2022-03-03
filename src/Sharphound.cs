@@ -1,4 +1,4 @@
-﻿// ---------------------------------------------------- //
+// ---------------------------------------------------- //
 //    ______                 __ __                  __  //
 //   / __/ /  ___ ________  / // /_   __ _____  ___/ /  //
 //  _\ \/ _ \/ _ `/ __/ _ \/ _  / _ \/ // / _ \/ _  /   //
@@ -85,6 +85,7 @@ namespace Sharphound
         public IContext Initialize(IContext context, LDAPConfig options)
         {
             context.Logger.LogTrace("Entering initialize link");
+            CommonLib.ReconfigureLogging(context.Logger);
             //We've successfully parsed arguments, lets do some options post-processing.
             var currentTime = DateTime.Now;
             //var padString = new string('-', initString.Length);
@@ -257,6 +258,8 @@ namespace Sharphound
 
         public IContext SaveCacheFile(IContext context)
         {
+            if (context.Flags.MemCache)
+                return context;
             // 15. Program exit started. Save the cache file
             var cache = Cache.GetCacheInstance();
             var serialized = JsonSerializer.Serialize(cache, StandardResolver.AllowPrivate);
@@ -310,7 +313,7 @@ namespace Sharphound
         public static async Task Main(string[] args)
         {
             var logger = new BasicLogger((int)LogLevel.Information);
-
+            
             try
             {
                 var parser = new Parser(with =>
@@ -341,7 +344,7 @@ namespace Sharphound
                         NoOutput = false,
                         Stealth = options.Stealth,
                         RandomizeFilenames = options.RandomFileNames,
-                        NoSaveCache = options.MemCache,
+                        MemCache = options.MemCache,
                         CollectAllProperties = options.CollectAllProperties,
                         DCOnly = dconly,
                         PrettyPrint = options.PrettyPrint,
@@ -352,7 +355,8 @@ namespace Sharphound
                     {
                         Port = options.LDAPPort,
                         DisableSigning = options.DisableSigning,
-                        SSL = options.SecureLDAP
+                        SSL = options.SecureLDAP,
+                        AuthType = AuthType.Negotiate
                     };
 
                     if (options.DomainController != null) ldapOptions.Server = options.DomainController;
@@ -395,17 +399,17 @@ namespace Sharphound
                     var cancellationTokenSource = new CancellationTokenSource();
                     context.CancellationTokenSource = cancellationTokenSource;
 
-                // Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs eventArgs)
-                // {
-                //     eventArgs.Cancel = true;
-                //     cancellationTokenSource.Cancel();
-                // };
+                    // Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs eventArgs)
+                    // {
+                    //     eventArgs.Cancel = true;
+                    //     cancellationTokenSource.Cancel();
+                    // };
 
-                // Create new chain links
-                Links<IContext> links = new SharpLinks();
+                    // Create new chain links
+                    Links<IContext> links = new SharpLinks();
 
-                // Run our chain
-                context = links.Initialize(context, ldapOptions);
+                    // Run our chain
+                    context = links.Initialize(context, ldapOptions);
                     if (context.Flags.IsFaulted)
                         return;
                     context = links.TestConnection(context);
@@ -423,8 +427,7 @@ namespace Sharphound
                     context = await links.AwaitLoopCompletion(context);
                     context = links.SaveCacheFile(context);
                     links.Finish(context);
-                });
-            }
+            });
             catch (Exception ex)
             {
                 logger.LogError($"Error running SharpHound: {ex.Message}\n{ex.StackTrace}");
