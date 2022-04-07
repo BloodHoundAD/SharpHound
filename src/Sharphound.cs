@@ -313,7 +313,7 @@ namespace Sharphound
         public static async Task Main(string[] args)
         {
             var logger = new BasicLogger((int)LogLevel.Information);
-            
+
             try
             {
                 var parser = new Parser(with =>
@@ -427,7 +427,8 @@ namespace Sharphound
                     context = await links.AwaitLoopCompletion(context);
                     context = links.SaveCacheFile(context);
                     links.Finish(context);
-            });
+                });
+            }
             catch (Exception ex)
             {
                 logger.LogError($"Error running SharpHound: {ex.Message}\n{ex.StackTrace}");
