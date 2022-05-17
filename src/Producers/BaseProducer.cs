@@ -71,7 +71,7 @@ namespace Sharphound.Producers
             {
                 if ((methods & ResolvedCollectionMethod.Container) != 0)
                 {
-                    query = query.AddContainers();
+                    query = query.AddContainers().AddDomains();
                     props.AddRange(CommonProperties.ContainerProps);
                 }
 
