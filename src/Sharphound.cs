@@ -354,6 +354,7 @@ namespace Sharphound
                     SkipPortScan = options.SkipPortCheck,
                     DisableKerberosSigning = options.DisableSigning,
                     SecureLDAP = options.SecureLDAP,
+                    DisableCertVerification = options.DisableCertVerification,
                     InvalidateCache = options.RebuildCache,
                     NoZip = options.NoZip,
                     NoOutput = false,
@@ -371,6 +372,7 @@ namespace Sharphound
                     Port = options.LDAPPort,
                     DisableSigning = options.DisableSigning,
                     SSL = options.SecureLDAP,
+                    DisableCertVerification = options.DisableCertVerification,
                     AuthType = AuthType.Negotiate
                 };
 

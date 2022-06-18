@@ -78,6 +78,8 @@ dotnet build
 
   --secureldap               (Default: false) Connect to LDAP SSL instead of regular LDAP
 
+  --disablecertverification  (Default: false) Disables certificate verification when using LDAPS
+
   --disablesigning           (Default: false) Disables Kerberos Signing/Sealing
 
   --skipportcheck            (Default: false) Skip checking if 445 is open

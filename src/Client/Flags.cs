@@ -13,6 +13,7 @@
         public bool NoZip { get; set; }
         public bool InvalidateCache { get; set; }
         public bool SecureLDAP { get; set; }
+        public bool DisableCertVerification { get; set; }
         public bool DisableKerberosSigning { get; set; }
         public bool SkipPortScan { get; set; }
         public bool ExcludeDomainControllers { get; set; }
