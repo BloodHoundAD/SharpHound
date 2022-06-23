@@ -331,119 +331,126 @@ namespace Sharphound
         public static async Task Main(string[] args)
         {
             var logger = new BasicLogger((int)LogLevel.Information);
-            var parser = new Parser(with =>
+            try
             {
-                with.CaseInsensitiveEnumValues = true;
-                with.CaseSensitive = false;
-                with.HelpWriter = Console.Error;
-            });
-            var options = parser.ParseArguments<Options>(args);
-
-            await options.WithParsedAsync(async options =>
-            {
-                if (!options.ResolveCollectionMethods(logger, out var resolved, out var dconly)) return;
-
-                logger = new BasicLogger(options.Verbosity);
-
-                var flags = new Flags
+                var parser = new Parser(with =>
                 {
-                    Loop = options.Loop,
-                    DumpComputerStatus = options.TrackComputerCalls,
-                    NoRegistryLoggedOn = options.SkipRegistryLoggedOn,
-                    ExcludeDomainControllers = options.ExcludeDCs,
-                    SkipPortScan = options.SkipPortCheck,
-                    SkipPasswordAgeCheck = options.SkipPasswordCheck,
-                    DisableKerberosSigning = options.DisableSigning,
-                    SecureLDAP = options.SecureLDAP,
-                    InvalidateCache = options.RebuildCache,
-                    NoZip = options.NoZip,
-                    NoOutput = false,
-                    Stealth = options.Stealth,
-                    RandomizeFilenames = options.RandomFileNames,
-                    MemCache = options.MemCache,
-                    CollectAllProperties = options.CollectAllProperties,
-                    DCOnly = dconly,
-                    PrettyPrint = options.PrettyPrint,
-                    SearchForest = options.SearchForest
-                };
+                    with.CaseInsensitiveEnumValues = true;
+                    with.CaseSensitive = false;
+                    with.HelpWriter = Console.Error;
+                });
+                var options = parser.ParseArguments<Options>(args);
 
-                var ldapOptions = new LDAPConfig
+                await options.WithParsedAsync(async options =>
                 {
-                    Port = options.LDAPPort,
-                    DisableSigning = options.DisableSigning,
-                    SSL = options.SecureLDAP,
-                    AuthType = AuthType.Negotiate
-                };
+                    if (!options.ResolveCollectionMethods(logger, out var resolved, out var dconly)) return;
 
-                if (options.DomainController != null) ldapOptions.Server = options.DomainController;
+                    logger = new BasicLogger(options.Verbosity);
 
-                if (options.LDAPUsername != null)
-                {
-                    if (options.LDAPPassword == null)
+                    var flags = new Flags
                     {
-                        logger.LogError("You must specify LDAPPassword if using the LDAPUsername options");
-                        return;
+                        Loop = options.Loop,
+                        DumpComputerStatus = options.TrackComputerCalls,
+                        NoRegistryLoggedOn = options.SkipRegistryLoggedOn,
+                        ExcludeDomainControllers = options.ExcludeDCs,
+                        SkipPortScan = options.SkipPortCheck,
+                        SkipPasswordAgeCheck = options.SkipPasswordCheck,
+                        DisableKerberosSigning = options.DisableSigning,
+                        SecureLDAP = options.SecureLDAP,
+                        InvalidateCache = options.RebuildCache,
+                        NoZip = options.NoZip,
+                        NoOutput = false,
+                        Stealth = options.Stealth,
+                        RandomizeFilenames = options.RandomFileNames,
+                        MemCache = options.MemCache,
+                        CollectAllProperties = options.CollectAllProperties,
+                        DCOnly = dconly,
+                        PrettyPrint = options.PrettyPrint,
+                        SearchForest = options.SearchForest
+                    };
+
+                    var ldapOptions = new LDAPConfig
+                    {
+                        Port = options.LDAPPort,
+                        DisableSigning = options.DisableSigning,
+                        SSL = options.SecureLDAP,
+                        AuthType = AuthType.Negotiate
+                    };
+
+                    if (options.DomainController != null) ldapOptions.Server = options.DomainController;
+
+                    if (options.LDAPUsername != null)
+                    {
+                        if (options.LDAPPassword == null)
+                        {
+                            logger.LogError("You must specify LDAPPassword if using the LDAPUsername options");
+                            return;
+                        }
+
+                        ldapOptions.Username = options.LDAPUsername;
+                        ldapOptions.Password = options.LDAPPassword;
                     }
 
-                    ldapOptions.Username = options.LDAPUsername;
-                    ldapOptions.Password = options.LDAPPassword;
-                }
+                    IContext context = new BaseContext(logger, ldapOptions, flags)
+                    {
+                        DomainName = options.Domain,
+                        CacheFileName = options.CacheName,
+                        ZipFilename = options.ZipFilename,
+                        SearchBase = options.DistinguishedName,
+                        StatusInterval = options.StatusInterval,
+                        RealDNSName = options.RealDNSName,
+                        ComputerFile = options.ComputerFile,
+                        OutputPrefix = options.OutputPrefix,
+                        OutputDirectory = options.OutputDirectory,
+                        Jitter = options.Jitter,
+                        Throttle = options.Throttle,
+                        LdapFilter = options.LdapFilter,
+                        PortScanTimeout = options.PortCheckTimeout,
+                        ResolvedCollectionMethods = resolved,
+                        Threads = options.Threads,
+                        LoopDuration = options.LoopDuration,
+                        LoopInterval = options.LoopInterval,
+                        ZipPassword = options.ZipPassword,
+                        IsFaulted = false
+                    };
 
-                IContext context = new BaseContext(logger, ldapOptions, flags)
-                {
-                    DomainName = options.Domain,
-                    CacheFileName = options.CacheName,
-                    ZipFilename = options.ZipFilename,
-                    SearchBase = options.DistinguishedName,
-                    StatusInterval = options.StatusInterval,
-                    RealDNSName = options.RealDNSName,
-                    ComputerFile = options.ComputerFile,
-                    OutputPrefix = options.OutputPrefix,
-                    OutputDirectory = options.OutputDirectory,
-                    Jitter = options.Jitter,
-                    Throttle = options.Throttle,
-                    LdapFilter = options.LdapFilter,
-                    PortScanTimeout = options.PortCheckTimeout,
-                    ResolvedCollectionMethods = resolved,
-                    Threads = options.Threads,
-                    LoopDuration = options.LoopDuration,
-                    LoopInterval = options.LoopInterval,
-                    ZipPassword = options.ZipPassword,
-                    IsFaulted = false
-                };
-                
-                var cancellationTokenSource = new CancellationTokenSource();
-                context.CancellationTokenSource = cancellationTokenSource;
-                
-                // Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs eventArgs)
-                // {
-                //     eventArgs.Cancel = true;
-                //     cancellationTokenSource.Cancel();
-                // };
+                    var cancellationTokenSource = new CancellationTokenSource();
+                    context.CancellationTokenSource = cancellationTokenSource;
 
-                // Create new chain links
-                Links<IContext> links = new SharpLinks();
+                    // Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs eventArgs)
+                    // {
+                    //     eventArgs.Cancel = true;
+                    //     cancellationTokenSource.Cancel();
+                    // };
 
-                // Run our chain
-                context = links.Initialize(context, ldapOptions);
-                if (context.Flags.IsFaulted)
-                    return;
-                context = links.TestConnection(context);
-                if (context.Flags.IsFaulted)
-                    return;
-                context = links.SetSessionUserName(options.OverrideUserName, context);
-                context = links.InitCommonLib(context);
-                context = links.GetDomainsForEnumeration(context);
-                if (context.Flags.IsFaulted)
-                    return;
-                context = links.StartBaseCollectionTask(context);
-                context = await links.AwaitBaseRunCompletion(context);
-                context = links.StartLoopTimer(context);
-                context = links.StartLoop(context);
-                context = await links.AwaitLoopCompletion(context);
-                context = links.SaveCacheFile(context);
-                links.Finish(context);
-            });
+                    // Create new chain links
+                    Links<IContext> links = new SharpLinks();
+
+                    // Run our chain
+                    context = links.Initialize(context, ldapOptions);
+                    if (context.Flags.IsFaulted)
+                        return;
+                    context = links.TestConnection(context);
+                    if (context.Flags.IsFaulted)
+                        return;
+                    context = links.SetSessionUserName(options.OverrideUserName, context);
+                    context = links.InitCommonLib(context);
+                    context = links.GetDomainsForEnumeration(context);
+                    if (context.Flags.IsFaulted)
+                        return;
+                    context = links.StartBaseCollectionTask(context);
+                    context = await links.AwaitBaseRunCompletion(context);
+                    context = links.StartLoopTimer(context);
+                    context = links.StartLoop(context);
+                    context = await links.AwaitLoopCompletion(context);
+                    context = links.SaveCacheFile(context);
+                    links.Finish(context);
+                });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError($"Error running SharpHound: {ex.Message}\n{ex.StackTrace}");
+            }
         }
 
         // Accessor function for the PS1 to work, do not change or remove
