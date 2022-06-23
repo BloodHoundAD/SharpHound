@@ -15,6 +15,7 @@
         public bool SecureLDAP { get; set; }
         public bool DisableKerberosSigning { get; set; }
         public bool SkipPortScan { get; set; }
+        public bool SkipPasswordAgeCheck { get; set; }
         public bool ExcludeDomainControllers { get; set; }
         public bool NoRegistryLoggedOn { get; set; }
         public bool DumpComputerStatus { get; set; }

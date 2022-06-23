@@ -14,7 +14,7 @@ namespace Sharphound
         // Options that affect what is collected
         [Option('c', "collectionmethods", Default = new[] { "Default" },
             HelpText =
-                "Collection Methods: Container, Group, LocalGroup, GPOLocalGroup, Session, LoggedOn, ObjectProps, ACL, ComputerOnly, Trusts, Default, RDP, DCOM, DCOnly")]
+                "Collection Methods: Group, LocalGroup, LocalAdmin, RDP, DCOM, PSRemote, Session, Trusts, ACL, Container, ComputerOnly, GPOLocalGroup, LoggedOn, ObjectProps, SPNTargets, Default, DCOnly, All")]
         public IEnumerable<string> CollectionMethods { get; set; }
 
         [Option('d', "domain", Default = null, HelpText = "Specify domain to enumerate")]
@@ -59,13 +59,13 @@ namespace Sharphound
 
         [Option(HelpText = "Don't zip files", Default = false)]
         public bool NoZip { get; set; }
+        
+        [Option(HelpText = "Password protects the zip with the specified password", Default = null)]
+        public string ZipPassword { get; set; }
 
         [Option(HelpText = "Adds a CSV tracking requests to computers", Default = false)]
         public bool TrackComputerCalls { get; set; }
 
-        [Option(HelpText = "Password protects the zip with the specified password", Default = null)]
-        public string ZipPassword { get; set; }
-        
         [Option(HelpText = "Pretty print JSON", Default = false)]
         public bool PrettyPrint { get; set; }
 
@@ -92,9 +92,12 @@ namespace Sharphound
         //Options that affect how enumeration is performed
         [Option(HelpText = "Skip checking if 445 is open", Default = false)]
         public bool SkipPortCheck { get; set; }
-
+        
         [Option(HelpText = "Timeout for port checks in milliseconds", Default = 500)]
         public int PortCheckTimeout { get; set; }
+        
+        [Option(HelpText = "Skip check for PwdLastSet when enumerating computers", Default = false)]
+        public bool SkipPasswordCheck { get; set; }
 
         [Option(HelpText = "Exclude domain controllers from session/localgroup enumeration (mostly for ATA/ATP)",
             Default = false)]

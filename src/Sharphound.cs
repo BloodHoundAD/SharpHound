@@ -352,6 +352,7 @@ namespace Sharphound
                     NoRegistryLoggedOn = options.SkipRegistryLoggedOn,
                     ExcludeDomainControllers = options.ExcludeDCs,
                     SkipPortScan = options.SkipPortCheck,
+                    SkipPasswordAgeCheck = options.SkipPasswordCheck,
                     DisableKerberosSigning = options.DisableSigning,
                     SecureLDAP = options.SecureLDAP,
                     InvalidateCache = options.RebuildCache,
