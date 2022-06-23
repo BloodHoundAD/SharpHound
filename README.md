@@ -77,12 +77,16 @@ dotnet build
   --ldapport                 (Default: 0) Override port for LDAP
 
   --secureldap               (Default: false) Connect to LDAP SSL instead of regular LDAP
+  
+  --disablecertverification  (Default: false) Disable certificate verification for secure LDAP
 
   --disablesigning           (Default: false) Disables Kerberos Signing/Sealing
 
   --skipportcheck            (Default: false) Skip checking if 445 is open
 
   --portchecktimeout         (Default: 500) Timeout for port checks in milliseconds
+  
+  --skippasswordcheck        (Default: false) Skip PwdLastSet age check when checking computers
 
   --excludedcs               (Default: false) Exclude domain controllers from session/localgroup enumeration (mostly for
                              ATA/ATP)

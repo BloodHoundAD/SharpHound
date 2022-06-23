@@ -374,7 +374,8 @@ namespace Sharphound
                         Port = options.LDAPPort,
                         DisableSigning = options.DisableSigning,
                         SSL = options.SecureLDAP,
-                        AuthType = AuthType.Negotiate
+                        AuthType = AuthType.Negotiate,
+                        DisableCertVerification = options.DisableCertVerification
                     };
 
                     if (options.DomainController != null) ldapOptions.Server = options.DomainController;

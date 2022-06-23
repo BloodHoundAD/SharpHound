@@ -128,6 +128,10 @@
     .PARAMETER SecureLDAP
 
         Connect to LDAPS (LDAP SSL) instead of regular LDAP
+        
+    .PARAMETER DisableCertVerification
+        
+        Disable certificate verification for secure LDAP
 
     .PARAMETER DisableSigning
 
@@ -310,6 +314,9 @@
 
         [Switch]
         $SecureLdap,
+        
+        [Switch]
+        $DisableCertVerification,
 
         [Switch]
         $DisableSigning,
@@ -507,6 +514,11 @@
     if ($SecureLdap)
     {
         $vars.Add("--SecureLdap");
+    }
+    
+    if ($DisableCertVerification) 
+    {
+        $vars.Add("--DisableCertVerification")    
     }
 
     if ($DisableSigning)

@@ -85,6 +85,9 @@ namespace Sharphound
 
         [Option(HelpText = "Connect to LDAP SSL instead of regular LDAP", Default = false)]
         public bool SecureLDAP { get; set; }
+        
+        [Option(HelpText = "Disables certificate verification when using LDAPS", Default = false)]
+        public bool DisableCertVerification { get; set; }
 
         [Option(HelpText = "Disables Kerberos Signing/Sealing", Default = false)]
         public bool DisableSigning { get; set; }
