@@ -86,6 +86,7 @@ namespace Sharphound.Runtime
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
             ret.Properties.Add("highvalue", false);
+            ret.Properties.Add("samaccountname", entry.GetProperty(LDAPProperties.SAMAccountName));
 
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {
@@ -138,6 +139,7 @@ namespace Sharphound.Runtime
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
             ret.Properties.Add("highvalue", false);
+            ret.Properties.Add("samaccountname", entry.GetProperty(LDAPProperties.SAMAccountName));
 
             var hasLaps = entry.HasLAPS();
             ret.Properties.Add("haslaps", hasLaps);
@@ -323,6 +325,7 @@ namespace Sharphound.Runtime
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
             ret.Properties.Add("highvalue", IsHighValueGroup(resolvedSearchResult.ObjectId));
+            ret.Properties.Add("samaccountname", entry.GetProperty(LDAPProperties.SAMAccountName));
 
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {
