@@ -25,11 +25,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommandLine;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Sharphound.Client;
 using Sharphound.Runtime;
 using SharpHoundCommonLib;
-using Utf8Json;
-using Utf8Json.Resolvers;
 using Timer = System.Timers.Timer;
 
 namespace Sharphound
@@ -187,9 +186,9 @@ namespace Sharphound
                 try
                 {
                     context.Logger.LogTrace("Loading cache from disk");
-                    var bytes = File.ReadAllBytes(path);
-                    cache = JsonSerializer.Deserialize<Cache>(bytes, Utf8JsonConfiguration.Resolver);
-                    context.Logger.LogInformation("Loaded cache with stats: {stats}", cache.GetCacheStats());
+                    var json = File.ReadAllText(path);
+                    cache = JsonConvert.DeserializeObject<Cache>(json);
+                    context.Logger.LogInformation("Loaded cache with stats: {stats}", cache?.GetCacheStats());
                 }
                 catch (Exception e)
                 {
@@ -217,7 +216,7 @@ namespace Sharphound
                 }
 
                 context.Domains = (from Domain d in forest.Domains select d.Name).ToArray();
-                context.Logger.LogInformation("Domains for enumeration: {Domains}", JsonSerializer.ToJsonString(context.Domains));
+                context.Logger.LogInformation("Domains for enumeration: {Domains}", JsonConvert.SerializeObject(context.Domains));
                 return context;
             }
 
@@ -280,10 +279,10 @@ namespace Sharphound
                 return context;
             // 15. Program exit started. Save the cache file
             var cache = Cache.GetCacheInstance();
-            var serialized = JsonSerializer.Serialize(cache, StandardResolver.AllowPrivate);
+            var serialized = JsonConvert.SerializeObject(cache);
             using var stream =
-                new FileStream(context.GetCachePath(), FileMode.Create, FileAccess.Write, FileShare.None);
-            stream.Write(serialized, 0, serialized.Length);
+                new StreamWriter(context.GetCachePath());
+            stream.Write(serialized);
             return context;
         }
         
