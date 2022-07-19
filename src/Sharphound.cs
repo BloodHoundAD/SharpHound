@@ -187,7 +187,7 @@ namespace Sharphound
                 {
                     context.Logger.LogTrace("Loading cache from disk");
                     var json = File.ReadAllText(path);
-                    cache = JsonConvert.DeserializeObject<Cache>(json);
+                    cache = JsonConvert.DeserializeObject<Cache>(json, CacheContractResolver.Settings);
                     context.Logger.LogInformation("Loaded cache with stats: {stats}", cache?.GetCacheStats());
                 }
                 catch (Exception e)
@@ -279,6 +279,7 @@ namespace Sharphound
                 return context;
             // 15. Program exit started. Save the cache file
             var cache = Cache.GetCacheInstance();
+            context.Logger.LogInformation("Saving cache with stats: {stats}", cache.GetCacheStats());
             var serialized = JsonConvert.SerializeObject(cache);
             using var stream =
                 new StreamWriter(context.GetCachePath());
