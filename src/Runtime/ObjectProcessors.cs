@@ -106,6 +106,11 @@ namespace Sharphound.Runtime
             {
                 var userProps = await _ldapPropertyProcessor.ReadUserProperties(entry);
                 ret.Properties = ContextUtils.Merge(ret.Properties, userProps.Props);
+                if (_context.Flags.CollectAllProperties)
+                {
+                    ret.Properties = ContextUtils.Merge(_ldapPropertyProcessor.ParseAllProperties(entry),
+                        ret.Properties);
+                }
                 ret.HasSIDHistory = userProps.SidHistory;
                 ret.AllowedToDelegate = userProps.AllowedToDelegate;
             }
@@ -160,6 +165,11 @@ namespace Sharphound.Runtime
             {
                 var computerProps = await _ldapPropertyProcessor.ReadComputerProperties(entry);
                 ret.Properties = ContextUtils.Merge(ret.Properties, computerProps.Props);
+                if (_context.Flags.CollectAllProperties)
+                {
+                    ret.Properties = ContextUtils.Merge(_ldapPropertyProcessor.ParseAllProperties(entry),
+                        ret.Properties);
+                }
                 ret.AllowedToDelegate = computerProps.AllowedToDelegate;
                 ret.AllowedToAct = computerProps.AllowedToAct;
                 ret.HasSIDHistory = computerProps.SidHistory;
@@ -342,6 +352,11 @@ namespace Sharphound.Runtime
             {
                 var groupProps = LDAPPropertyProcessor.ReadGroupProperties(entry);
                 ret.Properties = ContextUtils.Merge(ret.Properties, groupProps);
+                if (_context.Flags.CollectAllProperties)
+                {
+                    ret.Properties = ContextUtils.Merge(_ldapPropertyProcessor.ParseAllProperties(entry),
+                        ret.Properties);
+                }
             }
 
             return ret;
@@ -395,7 +410,14 @@ namespace Sharphound.Runtime
                 ret.Trusts = _domainTrustProcessor.EnumerateDomainTrusts(resolvedSearchResult.Domain).ToArray();
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
+            {
                 ret.Properties = ContextUtils.Merge(ret.Properties, LDAPPropertyProcessor.ReadDomainProperties(entry));
+                if (_context.Flags.CollectAllProperties)
+                {
+                    ret.Properties = ContextUtils.Merge(_ldapPropertyProcessor.ParseAllProperties(entry),
+                        ret.Properties);
+                }
+            }
 
             if ((_methods & ResolvedCollectionMethod.Container) != 0)
             {
@@ -433,7 +455,15 @@ namespace Sharphound.Runtime
             }
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
+            {
                 ret.Properties = ContextUtils.Merge(ret.Properties, LDAPPropertyProcessor.ReadGPOProperties(entry));
+                if (_context.Flags.CollectAllProperties)
+                {
+                    ret.Properties = ContextUtils.Merge(_ldapPropertyProcessor.ParseAllProperties(entry),
+                        ret.Properties);
+                }
+            }
+                
 
             return ret;
         }
@@ -459,7 +489,14 @@ namespace Sharphound.Runtime
             }
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
+            {
                 ret.Properties = ContextUtils.Merge(ret.Properties, LDAPPropertyProcessor.ReadOUProperties(entry));
+                if (_context.Flags.CollectAllProperties)
+                {
+                    ret.Properties = ContextUtils.Merge(_ldapPropertyProcessor.ParseAllProperties(entry),
+                        ret.Properties);
+                }
+            }
 
             if ((_methods & ResolvedCollectionMethod.Container) != 0)
             {
@@ -504,6 +541,11 @@ namespace Sharphound.Runtime
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
             {
+                if (_context.Flags.CollectAllProperties)
+                {
+                    ret.Properties = ContextUtils.Merge(_ldapPropertyProcessor.ParseAllProperties(entry),
+                        ret.Properties);
+                }
                 //ret.Properties = ContextUtils.Merge(ret.Properties, LDAPPropertyProcessor.)
             }
                 
