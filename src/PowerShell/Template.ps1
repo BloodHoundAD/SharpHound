@@ -396,6 +396,7 @@
                 $vars.add("-v")
                 $vars.add($PSBoundParameters.item($_))
             }
+        }
     }
     else {
         $PSBoundParameters.Keys |? {$_ -match "help" -or $_ -match "version"}| % {
