@@ -6,8 +6,8 @@
         <LangVersion>latest</LangVersion>
         <DebugType>full</DebugType>
         <ApplicationIcon>favicon.ico</ApplicationIcon>
-        <Version>1.0.4</Version>
-        <FileVersion>1.0.4</FileVersion>
+        <Version>1.1.0</Version>
+        <FileVersion>1.1.0</FileVersion>
         <Company>SpecterOps</Company>
         <Product>SharpHound</Product>
         <AssemblyName>SharpHound</AssemblyName>
@@ -24,14 +24,14 @@
         <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="5.0.0" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-        <PackageReference Include="SharpHoundCommon" Version="2.0.15" />
+        <PackageReference Include="SharpHoundCommon" Version="2.1.0" />
         <PackageReference Include="SharpZipLib" Version="1.3.3" />
         <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
         <PackageReference Include="System.Threading.Channels" Version="6.0.0" />
     </ItemGroup>
 
     <ItemGroup>
-<!--        <Reference Include="SharpHoundCommonLib, Version=2.0.13.0, Culture=neutral, PublicKeyToken=null">-->
+<!--        <Reference Include="SharpHoundCommonLib, Version=2.0.15.0, Culture=neutral, PublicKeyToken=null">-->
 <!--            <HintPath>..\SharpHoundCommon\src\CommonLib\bin\Debug\net462\SharpHoundCommonLib.dll</HintPath>-->
 <!--        </Reference>-->
         <Reference Include="System.DirectoryServices" />

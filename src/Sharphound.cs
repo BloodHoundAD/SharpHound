@@ -84,6 +84,10 @@ namespace Sharphound
         public IContext Initialize(IContext context, LDAPConfig options)
         {
             context.Logger.LogTrace("Entering initialize link");
+            JsonConvert.DefaultSettings = () => new JsonSerializerSettings
+            {
+                Converters = new List<JsonConverter> {new KindConvertor()}
+            };
             CommonLib.ReconfigureLogging(context.Logger);
             //We've successfully parsed arguments, lets do some options post-processing.
             var currentTime = DateTime.Now;
@@ -331,6 +335,7 @@ namespace Sharphound
         public static async Task Main(string[] args)
         {
             var logger = new BasicLogger((int)LogLevel.Information);
+            logger.LogInformation("This version of SharpHound is compatible with the 4.2 Release of BloodHound");
             try
             {
                 var parser = new Parser(with =>

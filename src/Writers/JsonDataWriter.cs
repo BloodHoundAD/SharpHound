@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using Sharphound.Client;
 using SharpHoundCommonLib.OutputTypes;
 
@@ -17,10 +18,6 @@ namespace Sharphound.Writers
         private JsonTextWriter _jsonWriter;
         private readonly IContext _context;
         private string _fileName;
-        private readonly JsonSerializer _serializer = new()
-        {
-            NullValueHandling = NullValueHandling.Include
-        };
 
         private const int DataVersion = 5;
 
@@ -36,6 +33,8 @@ namespace Sharphound.Writers
                 NoOp = true;
         }
 
+        private Formatting PrettyPrint => _context.Flags.PrettyPrint ? Formatting.Indented : Formatting.None;
+
         /// <summary>
         ///     Opens a new file handle for writing. Throws an exception if the file already exists.
         /// </summary>
@@ -49,7 +48,7 @@ namespace Sharphound.Writers
             _fileName = filename;
 
             _jsonWriter = new JsonTextWriter(new StreamWriter(filename, false, Encoding.UTF8));
-            _jsonWriter.Formatting = _context.Flags.PrettyPrint ? Formatting.Indented : Formatting.None;
+            _jsonWriter.Formatting = PrettyPrint;
             _jsonWriter.WriteStartObject();
             _jsonWriter.WritePropertyName("data");
             _jsonWriter.WriteStartArray();
@@ -62,7 +61,7 @@ namespace Sharphound.Writers
         {
             foreach (var item in Queue)
             {
-                _serializer.Serialize(_jsonWriter, item);
+                await _jsonWriter.WriteRawValueAsync(JsonConvert.SerializeObject(item, PrettyPrint));
             }
         }
 
@@ -90,7 +89,7 @@ namespace Sharphound.Writers
             await _jsonWriter.FlushAsync();
             await _jsonWriter.WriteEndArrayAsync();
             await _jsonWriter.WritePropertyNameAsync("meta");
-            _serializer.Serialize(_jsonWriter, meta);
+            await _jsonWriter.WriteRawValueAsync(JsonConvert.SerializeObject(meta, PrettyPrint));
             await _jsonWriter.FlushAsync();
             await _jsonWriter.CloseAsync();
         }
