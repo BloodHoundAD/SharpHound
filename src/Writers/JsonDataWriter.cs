@@ -2,9 +2,10 @@
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using Sharphound.Client;
 using SharpHoundCommonLib.OutputTypes;
-using Utf8Json;
 
 namespace Sharphound.Writers
 {
@@ -14,12 +15,11 @@ namespace Sharphound.Writers
     /// <typeparam name="T"></typeparam>
     public class JsonDataWriter<T> : BaseWriter<T>
     {
-        private const string FileStart = @"{""data"":[";
-        private const string FileStartPretty = "{\n\t\"data\":[\n";
+        private JsonTextWriter _jsonWriter;
         private readonly IContext _context;
         private string _fileName;
-        private bool _initialWrite = true;
-        private StreamWriter _streamWriter;
+
+        private const int DataVersion = 5;
 
         /// <summary>
         ///     Creates a new instance of a JSONWriter using the specified datatype and program context
@@ -33,6 +33,8 @@ namespace Sharphound.Writers
                 NoOp = true;
         }
 
+        private Formatting PrettyPrint => _context.Flags.PrettyPrint ? Formatting.Indented : Formatting.None;
+
         /// <summary>
         ///     Opens a new file handle for writing. Throws an exception if the file already exists.
         /// </summary>
@@ -45,8 +47,11 @@ namespace Sharphound.Writers
 
             _fileName = filename;
 
-            _streamWriter = new StreamWriter(filename, false, Encoding.UTF8);
-            _streamWriter.Write(_context.Flags.PrettyPrint ? FileStartPretty : FileStart);
+            _jsonWriter = new JsonTextWriter(new StreamWriter(filename, false, Encoding.UTF8));
+            _jsonWriter.Formatting = PrettyPrint;
+            _jsonWriter.WriteStartObject();
+            _jsonWriter.WritePropertyName("data");
+            _jsonWriter.WriteStartArray();
         }
 
         /// <summary>
@@ -54,21 +59,10 @@ namespace Sharphound.Writers
         /// </summary>
         protected override async Task WriteData()
         {
-            if (!_initialWrite)
-                await _streamWriter.WriteAsync(",");
-            else
-                _initialWrite = false;
-
-            if (_context.Flags.PrettyPrint)
+            foreach (var item in Queue)
             {
-                await _streamWriter.WriteAsync(string.Join(",",Queue.Select(x => JsonSerializer.PrettyPrint(JsonSerializer.Serialize(x), 2))));
+                await _jsonWriter.WriteRawValueAsync(JsonConvert.SerializeObject(item, PrettyPrint));
             }
-            else
-            {
-                await _streamWriter.WriteAsync(string.Join(",", Queue.Select(JsonSerializer.ToJsonString)));    
-            }
-            
-            Queue.Clear();
         }
 
         /// <summary>
@@ -81,30 +75,7 @@ namespace Sharphound.Writers
             
             if (Queue.Count > 0)
             {
-                if (!_initialWrite)
-                {
-                    await _streamWriter.WriteAsync(",");
-                }
-                
-                if (_context.Flags.PrettyPrint)
-                {
-                    await _streamWriter.WriteAsync(string.Join(",",Queue.Select(x => JsonSerializer.PrettyPrint(JsonSerializer.ToJsonString(x)))));
-                }
-                else
-                {
-                    await _streamWriter.WriteAsync(string.Join(",", Queue.Select(JsonSerializer.ToJsonString)));    
-                }
-                Queue.Clear();
-            }
-            
-
-            if (_context.Flags.PrettyPrint)
-            {
-                await _streamWriter.WriteAsync("],\n\"meta\":");    
-            }
-            else
-            {
-                await _streamWriter.WriteAsync(@"],""meta"":");    
+                await WriteData();
             }
             
             var meta = new MetaTag
@@ -112,22 +83,15 @@ namespace Sharphound.Writers
                 Count = Count,
                 CollectionMethods = (long)_context.ResolvedCollectionMethods,
                 DataType = DataType,
-                Version = 4
+                Version = DataVersion
             };
             
-            if (_context.Flags.PrettyPrint)
-            {
-                await _streamWriter.WriteAsync(JsonSerializer.PrettyPrint(JsonSerializer.ToJsonString(meta)));
-                await _streamWriter.WriteAsync("\n}");
-            }
-            else
-            {
-                await _streamWriter.WriteAsync(JsonSerializer.ToJsonString(meta));
-                await _streamWriter.WriteAsync("}");
-            }
-            
-            await _streamWriter.FlushAsync();
-            _streamWriter.Close();
+            await _jsonWriter.FlushAsync();
+            await _jsonWriter.WriteEndArrayAsync();
+            await _jsonWriter.WritePropertyNameAsync("meta");
+            await _jsonWriter.WriteRawValueAsync(JsonConvert.SerializeObject(meta, PrettyPrint));
+            await _jsonWriter.FlushAsync();
+            await _jsonWriter.CloseAsync();
         }
 
         /// <summary>
