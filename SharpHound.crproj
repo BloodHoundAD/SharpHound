@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project baseDir="." outputDir="Confused" xmlns="http://confuser.codeplex.com">
+    <rule preset="none" pattern="true">
+        <protection id="anti debug" />
+        <protection id="anti dump" />
+        <protection id="anti ildasm" />
+        <protection id="anti tamper" />
+        <protection id="constants" />
+        <protection id="ctrl flow" />
+        <protection id="invalid metadata" />
+        <protection id="ref proxy" />
+        <protection id="rename" />
+        <protection id="resources" />
+    </rule>
+    <packer id="compressor">
+      <argument name="key" value="normal" />
+      <argument name="compat" value="false" />
+    </packer>
+    <module path="SharpHound.exe" />
+    <probePath>..\..\bin\Debug</probePath>
+</project>
