@@ -4,6 +4,8 @@ SharpHound Open Source Client version: 1.0.4
 
 # SharpHound
 
+![GitHub all releases](https://img.shields.io/github/downloads/BloodHoundAD/SharpHound/total)
+
 ## Get SharpHound
 
 The latest build of SharpHound will always be in the BloodHound repository [here](https://github.com/BloodHoundAD/BloodHound/tree/master/Collectors)
