@@ -26,6 +26,8 @@ namespace Sharphound.Runtime
         private readonly GroupProcessor _groupProcessor;
         private readonly LDAPPropertyProcessor _ldapPropertyProcessor;
         private readonly GPOLocalGroupProcessor _gpoLocalGroupProcessor;
+        private readonly UserRightsAssignmentProcessor _userRightsAssignmentProcessor;
+        private readonly LocalGroupProcessor _localGroupProcessor;
         private readonly ILogger _log;
         private readonly ResolvedCollectionMethod _methods;
         private readonly SPNProcessors _spnProcessor;
@@ -42,6 +44,8 @@ namespace Sharphound.Runtime
             _groupProcessor = new GroupProcessor(context.LDAPUtils);
             _containerProcessor = new ContainerProcessor(context.LDAPUtils);
             _gpoLocalGroupProcessor = new GPOLocalGroupProcessor(context.LDAPUtils);
+            _userRightsAssignmentProcessor = new UserRightsAssignmentProcessor(context.LDAPUtils);
+            _localGroupProcessor = new LocalGroupProcessor(context.LDAPUtils);
             _methods = context.ResolvedCollectionMethods;
             _cancellationToken = context.CancellationTokenSource.Token;
             _log = log;
@@ -220,93 +224,17 @@ namespace Sharphound.Runtime
                     }, _cancellationToken);
             }
 
+            if ((_methods & ResolvedCollectionMethod.UserRights) != 0)
+            {
+                ret.UserRights = _userRightsAssignmentProcessor.GetUserRightsAssignments(resolvedSearchResult.DisplayName,
+                    resolvedSearchResult.DomainSid, resolvedSearchResult.Domain).ToArray();
+            }
+
             if (!_methods.IsLocalGroupCollectionSet())
                 return ret;
-
-            try
-            {
-                using var server = new SAMRPCServer(resolvedSearchResult.DisplayName, samAccountName,
-                    resolvedSearchResult.ObjectId, resolvedSearchResult.Domain);
-                if ((_methods & ResolvedCollectionMethod.LocalAdmin) != 0)
-                {
-                    ret.LocalAdmins = server.GetLocalGroupMembers((int)LocalGroupRids.Administrators);
-                    if (_context.Flags.DumpComputerStatus)
-                        await compStatusChannel.Writer.WriteAsync(new CSVComputerStatus
-                        {
-                            Status = ret.LocalAdmins.Collected ? StatusSuccess : ret.LocalAdmins.FailureReason,
-                            Task = "AdminLocalGroup",
-                            ComputerName = resolvedSearchResult.DisplayName
-                        }, _cancellationToken);
-                }
-
-                if ((_methods & ResolvedCollectionMethod.DCOM) != 0)
-                {
-                    ret.DcomUsers = server.GetLocalGroupMembers((int)LocalGroupRids.DcomUsers);
-                    if (_context.Flags.DumpComputerStatus)
-                        await compStatusChannel.Writer.WriteAsync(new CSVComputerStatus
-                        {
-                            Status = ret.DcomUsers.Collected ? StatusSuccess : ret.DcomUsers.FailureReason,
-                            Task = "DCOMLocalGroup",
-                            ComputerName = resolvedSearchResult.DisplayName
-                        }, _cancellationToken);
-                }
-
-                if ((_methods & ResolvedCollectionMethod.PSRemote) != 0)
-                {
-                    ret.PSRemoteUsers = server.GetLocalGroupMembers((int)LocalGroupRids.PSRemote);
-                    if (_context.Flags.DumpComputerStatus)
-                        await compStatusChannel.Writer.WriteAsync(new CSVComputerStatus
-                        {
-                            Status = ret.PSRemoteUsers.Collected ? StatusSuccess : ret.PSRemoteUsers.FailureReason,
-                            Task = "PSRemoteLocalGroup",
-                            ComputerName = resolvedSearchResult.DisplayName
-                        }, _cancellationToken);
-                }
-
-                if ((_methods & ResolvedCollectionMethod.RDP) != 0)
-                {
-                    ret.RemoteDesktopUsers = server.GetLocalGroupMembers((int)LocalGroupRids.RemoteDesktopUsers);
-                    if (_context.Flags.DumpComputerStatus)
-                        await compStatusChannel.Writer.WriteAsync(new CSVComputerStatus
-                        {
-                            Status = ret.RemoteDesktopUsers.Collected
-                                ? StatusSuccess
-                                : ret.RemoteDesktopUsers.FailureReason,
-                            Task = "RDPLocalGroup",
-                            ComputerName = resolvedSearchResult.DisplayName
-                        });
-                }
-            }
-            catch (Exception e)
-            {
-                await compStatusChannel.Writer.WriteAsync(new CSVComputerStatus
-                {
-                    Status = e.ToString(),
-                    ComputerName = resolvedSearchResult.DisplayName,
-                    Task = "SAMRPCServerInit"
-                }, _cancellationToken);
-                ret.DcomUsers = new LocalGroupAPIResult
-                {
-                    Collected = false,
-                    FailureReason = "SAMRPCServerInit Failed"
-                };
-                ret.PSRemoteUsers = new LocalGroupAPIResult
-                {
-                    Collected = false,
-                    FailureReason = "SAMRPCServerInit Failed"
-                };
-                ret.LocalAdmins = new LocalGroupAPIResult
-                {
-                    Collected = false,
-                    FailureReason = "SAMRPCServerInit Failed"
-                };
-                ret.RemoteDesktopUsers = new LocalGroupAPIResult
-                {
-                    Collected = false,
-                    FailureReason = "SAMRPCServerInit Failed"
-                };
-            }
-
+            ret.LocalGroups = _localGroupProcessor.GetLocalGroups(resolvedSearchResult.DisplayName,
+                resolvedSearchResult.DomainSid, resolvedSearchResult.Domain).ToArray();
+            
             return ret;
         }
 

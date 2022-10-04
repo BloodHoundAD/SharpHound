@@ -14,7 +14,7 @@ namespace Sharphound
         // Options that affect what is collected
         [Option('c', "collectionmethods", Default = new[] { "Default" },
             HelpText =
-                "Collection Methods: Group, LocalGroup, LocalAdmin, RDP, DCOM, PSRemote, Session, Trusts, ACL, Container, ComputerOnly, GPOLocalGroup, LoggedOn, ObjectProps, SPNTargets, Default, DCOnly, All")]
+                "Collection Methods: Group, LocalGroup, LocalAdmin, RDP, DCOM, PSRemote, Session, Trusts, ACL, Container, ComputerOnly, GPOLocalGroup, LoggedOn, ObjectProps, SPNTargets, UserRights, Default, DCOnly, All")]
         public IEnumerable<string> CollectionMethods { get; set; }
 
         [Option('d', "domain", Default = null, HelpText = "Specify domain to enumerate")]
@@ -26,7 +26,7 @@ namespace Sharphound
         [Option(HelpText = "Stealth Collection (Prefer DCOnly whenever possible!)")]
         public bool Stealth { get; set; }
 
-        [Option('f', HelpText = "Add an LDAP filter to the pregenerated filter.", Default = null)]
+        [Option('f', "ldapfilter", HelpText = "Add an LDAP filter to the pregenerated filter.", Default = null)]
         public string LdapFilter { get; set; }
 
         [Option(HelpText = "Base DistinguishedName to start the LDAP search at", Default = null)]
@@ -112,7 +112,7 @@ namespace Sharphound
         [Option(HelpText = "Add jitter to throttle (percent)")]
         public int Jitter { get; set; }
 
-        [Option(HelpText = "Number of threads to run enumeration with", Default = 50)]
+        [Option('t',"threads", HelpText = "Number of threads to run enumeration with", Default = 50)]
         public int Threads { get; set; }
 
         [Option(HelpText = "Skip registry session enumeration")]
@@ -181,6 +181,7 @@ namespace Sharphound
                     CollectionMethodOptions.Container => ResolvedCollectionMethod.Container,
                     CollectionMethodOptions.GPOLocalGroup => ResolvedCollectionMethod.GPOLocalGroup,
                     CollectionMethodOptions.LocalGroup => ResolvedCollectionMethod.LocalGroups,
+                    CollectionMethodOptions.UserRights => ResolvedCollectionMethod.UserRights,
                     CollectionMethodOptions.Default => ResolvedCollectionMethod.Default,
                     CollectionMethodOptions.DCOnly => ResolvedCollectionMethod.DCOnly,
                     CollectionMethodOptions.ComputerOnly => ResolvedCollectionMethod.ComputerOnly,

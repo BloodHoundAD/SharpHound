@@ -20,6 +20,7 @@
         Container,
         GPOLocalGroup,
         LocalGroup,
+        UserRights,
         Default,
         DCOnly,
         ComputerOnly,

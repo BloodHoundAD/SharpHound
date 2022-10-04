@@ -56,7 +56,9 @@ namespace Sharphound.Producers
                     (methods & ResolvedCollectionMethod.RDP) != 0 ||
                     (methods & ResolvedCollectionMethod.LoggedOn) != 0 ||
                     (methods & ResolvedCollectionMethod.Session) != 0 ||
-                    (methods & ResolvedCollectionMethod.ObjectProps) != 0)
+                    (methods & ResolvedCollectionMethod.ObjectProps) != 0 || 
+                    (methods & ResolvedCollectionMethod.UserRights) != 0)
+                    
                     props.AddRange(CommonProperties.ComputerMethodProps);
 
                 if ((methods & ResolvedCollectionMethod.Trusts) != 0) props.AddRange(CommonProperties.DomainTrustProps);
@@ -87,7 +89,8 @@ namespace Sharphound.Producers
                     (methods & ResolvedCollectionMethod.RDP) != 0 ||
                     (methods & ResolvedCollectionMethod.LoggedOn) != 0 ||
                     (methods & ResolvedCollectionMethod.Session) != 0 ||
-                    (methods & ResolvedCollectionMethod.ObjectProps) != 0)
+                    (methods & ResolvedCollectionMethod.ObjectProps) != 0 || 
+                    (methods & ResolvedCollectionMethod.UserRights) != 0)
                 {
                     query = query.AddComputers();
                     props.AddRange(CommonProperties.ComputerMethodProps);
