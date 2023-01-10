@@ -212,7 +212,7 @@ namespace Sharphound.Runtime
                         ComputerName = resolvedSearchResult.DisplayName
                     }, _cancellationToken);
 
-                var registrySessionResult = _computerSessionProcessor.ReadUserSessionsRegistry(apiName,
+                var registrySessionResult = await _computerSessionProcessor.ReadUserSessionsRegistry(apiName,
                     resolvedSearchResult.Domain, resolvedSearchResult.ObjectId);
                 ret.RegistrySessions = registrySessionResult;
                 if (_context.Flags.DumpComputerStatus)
@@ -227,13 +227,13 @@ namespace Sharphound.Runtime
             if ((_methods & ResolvedCollectionMethod.UserRights) != 0)
             {
                 ret.UserRights = _userRightsAssignmentProcessor.GetUserRightsAssignments(resolvedSearchResult.DisplayName,
-                    resolvedSearchResult.DomainSid, resolvedSearchResult.Domain).ToArray();
+                    resolvedSearchResult.DomainSid, resolvedSearchResult.Domain, resolvedSearchResult.IsDomainController).ToArray();
             }
 
             if (!_methods.IsLocalGroupCollectionSet())
                 return ret;
             ret.LocalGroups = _localGroupProcessor.GetLocalGroups(resolvedSearchResult.DisplayName,
-                resolvedSearchResult.DomainSid, resolvedSearchResult.Domain).ToArray();
+                resolvedSearchResult.DomainSid, resolvedSearchResult.Domain, resolvedSearchResult.IsDomainController).ToArray();
             
             return ret;
         }

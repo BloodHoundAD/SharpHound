@@ -97,7 +97,6 @@ namespace Sharphound.Writers
                 Queue.Clear();
             }
             
-
             if (_context.Flags.PrettyPrint)
             {
                 await _streamWriter.WriteAsync("],\n\"meta\":");    
