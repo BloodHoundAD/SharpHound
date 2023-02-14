@@ -115,6 +115,9 @@ namespace Sharphound
         }
 
         public string[] Domains { get; set; }
+        public string LocalAdminUsername { get; internal set; }
+        public string LocalAdminPassword { get; internal set; }
+        public bool LocalAdminSessionEnum { get; internal set; }
 
         // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
         // ~Context()

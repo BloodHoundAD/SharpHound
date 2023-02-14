@@ -76,8 +76,13 @@ namespace Sharphound
         [Option(HelpText = "Password for LDAP", Default = null)]
         public string LDAPPassword { get; set; }
 
-        [Option(HelpText = "Override domain controller to pull LDAP from. This option can result in data loss",
-            Default = null)]
+        [Option(HelpText = "Username for local Administrator", Default = null)]
+        public string LocalAdminUsername { get; set; }
+
+        [Option(HelpText = "Password for local Administrator", Default = null)]
+        public string LocalAdminPassword { get; set; }
+
+        [Option(HelpText = "Override domain controller to pull LDAP from. This option can result in data loss", Default = null)]
         public string DomainController { get; set; }
 
         [Option(HelpText = "Override port for LDAP", Default = 0)]

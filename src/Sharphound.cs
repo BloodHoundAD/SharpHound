@@ -371,7 +371,10 @@ namespace Sharphound
                         CollectAllProperties = options.CollectAllProperties,
                         DCOnly = dconly,
                         PrettyPrint = options.PrettyPrint,
-                        SearchForest = options.SearchForest
+                        SearchForest = options.SearchForest,
+                        LocalAdminSessionEnum = options.LocalAdminSessionEnum,
+                        LocalAdminUsername = options.LocalAdminUsername,
+                        LocalAdminPassword = options.LocalAdminPassword
                     };
 
                     var ldapOptions = new LDAPConfig
@@ -397,7 +400,8 @@ namespace Sharphound
                         ldapOptions.Password = options.LDAPPassword;
                     }
 
-                    IContext context = new BaseContext(logger, ldapOptions, flags)
+                    
+                        IContext context = new BaseContext(logger, ldapOptions, flags)
                     {
                         DomainName = options.Domain,
                         CacheFileName = options.CacheName,
@@ -417,7 +421,11 @@ namespace Sharphound
                         LoopDuration = options.LoopDuration,
                         LoopInterval = options.LoopInterval,
                         ZipPassword = options.ZipPassword,
-                        IsFaulted = false
+                        IsFaulted = false,
+                        LocalAdminSessionEnum = options.LocalAdminSessionEnum,
+                        LocalAdminUsername = options.LocalAdminUsername,
+                        LocalAdminPassword = options.LocalAdminPassword
+
                     };
 
                     var cancellationTokenSource = new CancellationTokenSource();
