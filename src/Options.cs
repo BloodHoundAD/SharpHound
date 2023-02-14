@@ -78,8 +78,16 @@ namespace Sharphound
         [Option(HelpText = "Password for LDAP", Default = null)]
         public string LDAPPassword { get; set; }
 
-        [Option(HelpText = "Override domain controller to pull LDAP from. This option can result in data loss",
-            Default = null)]
+        [Option(HelpText = "Do the session enumeration with local admin credentials instead of domain credentials", Default = false)]
+        public bool DoLocalAdminSessionEnum { get; set; }
+
+        [Option(HelpText = "Username for local Administrator to be used if DoLocalAdminSessionEnum is set", Default = null)]
+        public string LocalAdminUsername { get; set; }
+
+        [Option(HelpText = "Password for local Administrator to be used if DoLocalAdminSessionEnum is set", Default = null)]
+        public string LocalAdminPassword { get; set; }
+
+        [Option(HelpText = "Override domain controller to pull LDAP from. This option can result in data loss", Default = null)]
         public string DomainController { get; set; }
 
         [Option(HelpText = "Override port for LDAP", Default = 0)]

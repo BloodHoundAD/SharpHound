@@ -115,6 +115,12 @@ dotnet build
 
   --statusinterval           (Default: 30000) Interval in which to display status in milliseconds
 
+  --localadminsessionenum    Specify if you want to use a dedicated LOCAL user for session enumeration
+
+  --localadminusername       Specify the username of the localadmin for session enumeration
+
+  --localadminpassword       Specify the password of the localadmin for session enumeration
+
   -v                         (Default: 2) Enable verbose output. Lower is more verbose
 
   --help                     Display this help screen.
