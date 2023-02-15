@@ -25,7 +25,6 @@ namespace Sharphound.Client
         public bool DCOnly { get; set; }
         public bool PrettyPrint { get; set; }
         public bool SearchForest { get; set; }
-        public bool LocalAdminSessionEnum { get; set; }
-        
+        public bool DoLocalAdminSessionEnum { get; set; }
     }
 }
