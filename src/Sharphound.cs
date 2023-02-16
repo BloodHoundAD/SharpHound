@@ -82,7 +82,7 @@ namespace Sharphound
         /// <param name="options"></param>
         /// <param name="options2"></param>
         /// <returns></returns>
-        public IContext Initialize(IContext context, LDAPConfig options)
+        public IContext Initialize(IContext context, LDAPConfig options, Sharphound.Options options2)
         {
             context.Logger.LogTrace("Entering initialize link");
             JsonConvert.DefaultSettings = () => new JsonSerializerSettings
