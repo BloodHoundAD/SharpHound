@@ -80,6 +80,7 @@ namespace Sharphound
         /// </summary>
         /// <param name="context"></param>
         /// <param name="options"></param>
+        /// <param name="options2"></param>
         /// <returns></returns>
         public IContext Initialize(IContext context, LDAPConfig options)
         {
@@ -102,6 +103,28 @@ namespace Sharphound
                 context.Logger.LogTrace("You must specify both LdapUsername and LdapPassword if using these options!");
                 context.Flags.IsFaulted = true;
                 return context;
+            }
+            
+            // Check to make sure both Local Admin Session Enum options are set if either is set
+
+            if (options2.LocalAdminPassword != null && options2.LocalAdminUsername == null ||
+                options2.LocalAdminUsername != null && options2.LocalAdminPassword == null)
+            {
+                context.Logger.LogTrace("You must specify both LocalAdminUsername and LocalAdminPassword if using these options!");
+                context.Flags.IsFaulted = true;
+                return context;
+            }
+
+            // Check to make sure doLocalAdminSessionEnum is set when specifying localadmin and password
+
+            if (options2.LocalAdminPassword != null || options2.LocalAdminUsername != null)
+                { 
+                if (options2.DoLocalAdminSessionEnum == false)
+                {
+                    context.Logger.LogTrace("You must use the --doLocalAdminSessionEnum switch in combination with --LocalAdminUsername and --LocalAdminPassword!");
+                    context.Flags.IsFaulted = true;
+                    return context;
+                }
             }
 
             //Check some loop options
