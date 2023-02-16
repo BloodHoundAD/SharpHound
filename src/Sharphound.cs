@@ -80,9 +80,8 @@ namespace Sharphound
         /// </summary>
         /// <param name="context"></param>
         /// <param name="options"></param>
-        /// <param name="options2"></param>
         /// <returns></returns>
-        public IContext Initialize(IContext context, LDAPConfig options, Sharphound.Options options2)
+        public IContext Initialize(IContext context, LDAPConfig options)
         {
             context.Logger.LogTrace("Entering initialize link");
             JsonConvert.DefaultSettings = () => new JsonSerializerSettings
@@ -105,28 +104,6 @@ namespace Sharphound
                 return context;
             }
             
-            // Check to make sure both Local Admin Session Enum options are set if either is set
-
-            if (options2.LocalAdminPassword != null && options2.LocalAdminUsername == null ||
-                options2.LocalAdminUsername != null && options2.LocalAdminPassword == null)
-            {
-                context.Logger.LogTrace("You must specify both LocalAdminUsername and LocalAdminPassword if using these options!");
-                context.Flags.IsFaulted = true;
-                return context;
-            }
-
-            // Check to make sure doLocalAdminSessionEnum is set when specifying localadmin and password
-
-            if (options2.LocalAdminPassword != null || options2.LocalAdminUsername != null)
-                { 
-                if (options2.DoLocalAdminSessionEnum == false)
-                {
-                    context.Logger.LogTrace("You must use the --doLocalAdminSessionEnum switch in combination with --LocalAdminUsername and --LocalAdminPassword!");
-                    context.Flags.IsFaulted = true;
-                    return context;
-                }
-            }
-
             //Check some loop options
             if (!context.Flags.Loop) return context;
             //If loop is set, ensure we actually set options properly
@@ -420,7 +397,37 @@ namespace Sharphound
                         ldapOptions.Username = options.LDAPUsername;
                         ldapOptions.Password = options.LDAPPassword;
                     }
+                    
+                    // Check to make sure both Local Admin Session Enum options are set if either is set
 
+                    if (options.LocalAdminPassword != null && options.LocalAdminUsername == null ||
+                        options.LocalAdminUsername != null && options.LocalAdminPassword == null)
+                    {
+                        logger.LogError("You must specify both LocalAdminUsername and LocalAdminPassword if using these options!");
+                        return;
+                    }
+
+                    // Check to make sure doLocalAdminSessionEnum is set when specifying localadmin and password
+
+                    if (options.LocalAdminPassword != null || options.LocalAdminUsername != null)
+                    {
+                        if (options.DoLocalAdminSessionEnum == false)
+                        {
+                            logger.LogError("You must use the --doLocalAdminSessionEnum switch in combination with --LocalAdminUsername and --LocalAdminPassword!");
+                            return;
+                        }
+                    }
+
+                    // Check to make sure LocalAdminUsername and LocalAdminPassword are set when using doLocalAdminSessionEnum
+
+                    if (options.DoLocalAdminSessionEnum == true)
+                    {
+                        if (options.LocalAdminPassword == null || options.LocalAdminUsername == null)
+                        {
+                            logger.LogError("You must specify both LocalAdminUsername and LocalAdminPassword if using the --doLocalAdminSessionEnum option!");
+                            return;
+                        }
+                    }
                     
                     IContext context = new BaseContext(logger, ldapOptions, flags)
                     {
