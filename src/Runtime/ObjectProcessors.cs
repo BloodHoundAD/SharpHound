@@ -173,6 +173,9 @@ namespace Sharphound.Runtime
                 ret.AllowedToDelegate = computerProps.AllowedToDelegate;
                 ret.AllowedToAct = computerProps.AllowedToAct;
                 ret.HasSIDHistory = computerProps.SidHistory;
+                ret.ManagedBy = computerProps.ManagedBy;
+                ret.RevealOnDemand = computerProps.RevealOnDemand;
+                ret.NeverReveal = computerProps.NeverReveal;
             }
 
             if (!_methods.IsComputerCollectionSet())
