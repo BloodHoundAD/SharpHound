@@ -11,18 +11,21 @@
         <Company>SpecterOps</Company>
         <Product>SharpHound</Product>
         <AssemblyName>SharpHound</AssemblyName>
+        <Configurations>Debug;Release;Obfuscated</Configurations>
+        <Platforms>AnyCPU</Platforms>
     </PropertyGroup>
-    
-    <PropertyGroup>
-        <Obfuscate>true</Obfuscate>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Obfuscated' ">
+      <Optimize Condition=" '$(Optimize)' == '' ">true</Optimize>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="CommandLineParser" Version="2.8.0" />
-        <PackageReference Include="Confuser.MSBuild" Version="1.6.0">
+        <PackageReference Include="ConfuserEx.Final" Version="1.0.0">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <PackageReference Include="ILRepack" Version="2.1.0-beta1" />
         <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="5.0.0" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
@@ -44,6 +47,17 @@
     <ItemGroup>
       <Content Include="SharpHound.crproj" />
     </ItemGroup>
+
+    <ItemGroup>
+        <_CopyItems Include="$(OutDir)\*.dll" />
+    </ItemGroup>
+
+    <Target Name="Obfuscate" Condition="'$(Configuration)'=='Obfuscated'" AfterTargets="Build">
+        <Message Text="Creating Obfuscated Files" />
+        <Exec Command="$(ProjectDir)tools\Confuser.CLI.exe -n $(ProjectDir)SharpHound.crproj" />
+        <Copy SourceFiles="@(_CopyItems)" DestinationFolder="$(OutDir)\confused\" ContinueOnError="true" Condition="%(Filename)!='SharpHoundCommonLib.dll'" />
+    </Target>
+    
     <Target Name="PS1" AfterTargets="Build">
         <Message Text="Test" />
         <Exec Command="powershell -ep bypass -c &quot;. '$(ProjectDir)src\Powershell\Out-CompressedDLL.ps1';Out-CompressedDll -FilePath '$(TargetPath)' -TemplatePath '$(ProjectDir)src\\Powershell\Template.ps1' | Out-File -Encoding ASCII '$(TargetDir)$(TargetName).ps1'&quot;" />

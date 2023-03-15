@@ -1,5 +1,0 @@
-﻿<Weavers xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="FodyWeavers.xsd">
-<!--    <ILMerge HideImportedTypes="false" CompactMode="false" IncludeAssemblies="System.ValueTuple|CommandLine|ICSharpCode.*|Microsoft.*|SharpHoundCommon.*|System.*|Utf8.*" />-->
-    <!-- TODO: Remove these excludes when CS fixes their size limit -->
-<!--    <Costura IncludeDebugSymbols="false" ExcludeAssemblies="System.Console|System.Diagnostics.Tracing|System.Globalization.Calendar|System.Net.Http|dnlib" DisableCleanup="true" />-->
-</Weavers>
