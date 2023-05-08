@@ -383,253 +383,28 @@
     )
 
     $vars = New-Object System.Collections.Generic.List[System.Object]
-
-    if ($CollectionMethod)
-    {
-        $vars.Add("--CollectionMethods");
-        foreach ($cmethod in $CollectionMethod)
-        {
-            $vars.Add($cmethod);
+    
+    if(!($PSBoundParameters.ContainsKey("help") -or $PSBoundParameters.ContainsKey("version"))){
+        $PSBoundParameters.Keys | % {
+            if ($_ -notmatch "verbosity"){
+                $vars.add("--$_")
+                if($PSBoundParameters.item($_).gettype().name -notmatch "switch"){
+                    $vars.add($PSBoundParameters.item($_))
+                }
+            }
+            elseif ($_ -match "verbosity") {
+                $vars.add("-v")
+                $vars.add($PSBoundParameters.item($_))
+            }
         }
     }
-
-    if ($Domain)
-    {
-        $vars.Add("--Domain");
-        $vars.Add($Domain);
+    else {
+        $PSBoundParameters.Keys |? {$_ -match "help" -or $_ -match "version"}| % {
+            $vars.add("--$_")
+        }
     }
     
-    if ($SearchForest)
-    {
-        $vars.Add("--SearchForest")    
-    }
-
-    if ($Stealth)
-    {
-        $vars.Add("--Stealth")
-    }
-
-    if ($LdapFilter)
-    {
-        $vars.Add("--LdapFilter");
-        $vars.Add($LdapFilter);
-    }
-
-    if ($DistinguishedName)
-    {
-        $vars.Add("--DistinguishedName")
-        $vars.Add($DistinguishedName)
-    }
-    
-    if ($ComputerFile)
-    {
-        $vars.Add("--ComputerFile");
-        $vars.Add($ComputerFile);
-    }
-
-    if ($OutputDirectory)
-    {
-        $vars.Add("--OutputDirectory");
-        $vars.Add($OutputDirectory);
-    }
-
-    if ($OutputPrefix)
-    {
-        $vars.Add("--OutputPrefix");
-        $vars.Add($OutputPrefix);
-    }
-
-    if ($CacheName)
-    {
-        $vars.Add("--CacheName");
-        $vars.Add($CacheName);
-    }
-
-    if ($NoSaveCache)
-    {
-        $vars.Add("--MemCache");
-    }
-
-    if ($RebuildCache)
-    {
-        $vars.Add("--RebuildCache");
-    }
-
-    if ($RandomFilenames)
-    {
-        $vars.Add("--RandomFilenames");
-    }
-
-    if ($ZipFileName)
-    {
-        $vars.Add("--ZipFileName");
-        $vars.Add($ZipFileName);
-    }
-
-    if ($NoZip)
-    {
-        $vars.Add("--NoZip");
-    }
-
-    if ($ZipPassword)
-    {
-        $vars.Add("--ZipPassword");
-        $vars.Add($ZipPassword)
-    }
-
-    if ($TrackComputerCalls)
-    {
-        $vars.Add("--TrackComputerCalls")
-    }
-
-    if ($PrettyPrint)
-    {
-        $vars.Add("--PrettyPrint");
-    }
-
-    if ($LdapUsername)
-    {
-        $vars.Add("--LdapUsername");
-        $vars.Add($LdapUsername);
-    }
-
-    if ($LdapPassword)
-    {
-        $vars.Add("--LdapPassword");
-        $vars.Add($LdapPassword);
-    }
-
-    if ($DomainController)
-    {
-        $vars.Add("--DomainController");
-        $vars.Add($DomainController);
-    }
-    
-    if ($LdapPort)
-    {
-        $vars.Add("--LdapPort");
-        $vars.Add($LdapPort);
-    }
-    
-    if ($SecureLdap)
-    {
-        $vars.Add("--SecureLdap");
-    }
-    
-    if ($DisableCertVerification) 
-    {
-        $vars.Add("--DisableCertVerification")    
-    }
-
-    if ($DisableSigning)
-    {
-        $vars.Add("--DisableSigning");
-    }
-
-    if ($SkipPortCheck)
-    {
-        $vars.Add("--SkipPortCheck");
-    }
-
-    if ($PortCheckTimeout)
-    {
-        $vars.Add("--PortCheckTimeout")
-        $vars.Add($PortCheckTimeout)
-    }
-
-    if ($SkipPasswordCheck)
-    {
-        $vars.Add("--SkipPasswordCheck");
-    }
-
-    if ($ExcludeDCs)
-    {
-        $vars.Add("--ExcludeDCs")
-    }
-
-    if ($Throttle)
-    {
-        $vars.Add("--Throttle");
-        $vars.Add($Throttle);
-    }
-
-    if ($Jitter -gt 0)
-    {
-        $vars.Add("--Jitter");
-        $vars.Add($Jitter);
-    }
-    
-    if ($Threads)
-    {
-        $vars.Add("--Threads")
-        $vars.Add($Threads)
-    }
-
-    if ($SkipRegistryLoggedOn)
-    {
-        $vars.Add("--SkipRegistryLoggedOn")
-    }
-
-    if ($OverrideUserName)
-    {
-        $vars.Add("--OverrideUserName")
-        $vars.Add($OverrideUsername)
-    }
-    
-    if ($RealDNSName)
-    {
-        $vars.Add("--RealDNSName")
-        $vars.Add($RealDNSName)
-    }
-
-    if ($CollectAllProperties)
-    {
-        $vars.Add("--CollectAllProperties")
-    }
-
-    if ($Loop)
-    {
-        $vars.Add("--Loop")
-    }
-
-    if ($LoopDuration)
-    {
-        $vars.Add("--LoopDuration")
-        $vars.Add($LoopDuration)
-    }
-
-    if ($LoopInterval)
-    {
-        $vars.Add("--LoopInterval")
-        $vars.Add($LoopInterval)
-    }
-
-    if ($StatusInterval)
-    {
-        $vars.Add("--StatusInterval")
-        $vars.Add($StatusInterval)
-    }
-
-    if ($Verbosity)
-    {
-        $vars.Add("-v");
-        $vars.Add($Verbosity);
-    }    
-
-    if ($Help)
-    {
-        $vars.clear()
-        $vars.Add("--Help");
-    }
-
-    if ($Version)
-    {
-        $vars.clear();
-        $vars.Add("--Version");
-    }
-
     $passed = [string[]]$vars.ToArray()
-
 
     #ENCODEDCONTENTHERE
 }
