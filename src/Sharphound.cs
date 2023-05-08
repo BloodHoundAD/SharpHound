@@ -335,7 +335,7 @@ namespace Sharphound
         public static async Task Main(string[] args)
         {
             var logger = new BasicLogger((int)LogLevel.Information);
-            logger.LogInformation("This version of SharpHound is compatible with the 4.2 Release of BloodHound");
+            logger.LogInformation("This version of SharpHound is compatible with the 4.3.1 Release of BloodHound");
             try
             {
                 var parser = new Parser(with =>
