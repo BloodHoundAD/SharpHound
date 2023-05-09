@@ -131,10 +131,10 @@ namespace Sharphound
         [Option('l', "Loop", HelpText = "Loop computer collection")]
         public bool Loop { get; set; }
 
-        [Option(HelpText="Loop duration (Defaults to 2 hours)")]
+        [Option(HelpText="Loop duration (hh:mm:ss - 05:00:00 is 5 hours, default: 2 hrs)")]
         public TimeSpan LoopDuration { get; set; }
 
-        [Option(HelpText="Delay between loops")] public TimeSpan LoopInterval { get; set; }
+        [Option(HelpText="Add delay between loops (hh:mm:ss - 00:03:00 is 3 minutes)")] public TimeSpan LoopInterval { get; set; }
 
         //Misc Options
         [Option(HelpText = "Interval in which to display status in milliseconds", Default = 30000)]

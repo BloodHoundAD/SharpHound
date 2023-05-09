@@ -1,5 +1,5 @@
 ---
-SharpHound Open Source Client version: 1.0.4
+SharpHound Open Source Client version: 1.1.1
 ---
 
 # SharpHound
@@ -109,7 +109,7 @@ dotnet build
 
   -l, --Loop                 Loop computer collection
 
-  --loopduration             Loop duration (hh:mm:ss - 05:00:00 is 5 hours)
+  --loopduration             Loop duration (hh:mm:ss - 05:00:00 is 5 hours, default: 2 hrs)
 
   --loopinterval             Add delay between loops (hh:mm:ss - 00:03:00 is 3 minute)
 
