@@ -12,9 +12,9 @@
         for the SharpHound executable and passed in via reflection. The appropriate function
         calls are made in order to ensure that assembly dependencies are loaded properly.
 
-    .PARAMETER CollectionMethod
+    .PARAMETER CollectionMethods
 
-        Specifies the CollectionMethod being used. Possible value are:
+        Specifies the CollectionMethods being used. Possible value are:
             Group - Collect group membership information
             LocalGroup - Collect local group information for computers
             LocalAdmin - Collect local admin users for computers
@@ -225,14 +225,14 @@
 
     .EXAMPLE
 
-        PS C:\> Invoke-BloodHound -CollectionMethod All
+        PS C:\> Invoke-BloodHound -CollectionMethods All
 
         Runs ACL, ObjectProps, Container, and Default collection methods, compresses the data to a zip file,
         and then removes the JSON files from disk
 
     .EXAMPLE
 
-        PS C:\> Invoke-BloodHound -CollectionMethod DCOnly -NoSaveCache -RandomizeFilenames -EncryptZip
+        PS C:\> Invoke-BloodHound -CollectionMethods DCOnly -NoSaveCache -RandomizeFilenames -EncryptZip
 
         (Opsec!) Run LDAP only collection methods (Groups, Trusts, ObjectProps, ACL, Containers, GPO Admins) without outputting the cache file to disk.
         Randomizes filenames of the JSON files and the zip file and adds a password to the zip file
@@ -242,7 +242,7 @@
     param(
         [Alias("c")]
         [String[]]
-        $CollectionMethod = [String[]]@('Default'),
+        $CollectionMethods = [String[]]@('Default'),
 
         [Alias("d")]
         [String]
