@@ -194,6 +194,8 @@ namespace Sharphound.Runtime
 
             var samAccountName = entry.GetProperty(LDAPProperties.SAMAccountName)?.TrimEnd('$');
 
+            await _context.DoDelay();
+
             if ((_methods & ResolvedCollectionMethod.Session) != 0)
             {
                 var sessionResult = await _computerSessionProcessor.ReadUserSessions(apiName,
