@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Channels;
+using System.Threading.Tasks;
 using SharpHoundCommonLib;
 using SharpHoundCommonLib.Enums;
 
@@ -87,6 +88,15 @@ namespace Sharphound
                 if (flag == bits)
                     yield return value;
             }
+        }
+        internal static async Task<T[]> ToArrayAsync<T>(this IAsyncEnumerable<T> items,
+            CancellationToken cancellationToken = default)
+        {
+            var results = new List<T>();
+            await foreach (var item in items.WithCancellation(cancellationToken)
+                            .ConfigureAwait(false))
+                results.Add(item);
+            return results.ToArray();
         }
 
         internal static async IAsyncEnumerable<T> ReadAllAsync<T>(this ChannelReader<T> channel,

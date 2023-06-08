@@ -214,9 +214,11 @@ namespace Sharphound.Runtime
 
             if ((_methods & ResolvedCollectionMethod.LoggedOn) != 0)
             {
-                var privSessionResult = _computerSessionProcessor.ReadUserSessionsPrivileged(apiName,
-                    samAccountName, resolvedSearchResult.ObjectId);
+                var privSessionResult = await _computerSessionProcessor.ReadUserSessionsPrivileged(
+                    resolvedSearchResult.DisplayName, samAccountName,
+                    resolvedSearchResult.ObjectId);
                 ret.PrivilegedSessions = privSessionResult;
+
                 if (_context.Flags.DumpComputerStatus)
                     await compStatusChannel.Writer.WriteAsync(new CSVComputerStatus
                     {
@@ -239,14 +241,19 @@ namespace Sharphound.Runtime
 
             if ((_methods & ResolvedCollectionMethod.UserRights) != 0)
             {
-                ret.UserRights = _userRightsAssignmentProcessor.GetUserRightsAssignments(resolvedSearchResult.DisplayName,
-                    resolvedSearchResult.DomainSid, resolvedSearchResult.Domain, resolvedSearchResult.IsDomainController).ToArray();
+                var userRights = _userRightsAssignmentProcessor.GetUserRightsAssignments(
+                                    resolvedSearchResult.DisplayName, resolvedSearchResult.ObjectId,
+                                    resolvedSearchResult.Domain, resolvedSearchResult.IsDomainController);
+                ret.UserRights = await userRights.ToArrayAsync();
             }
 
             if (!_methods.IsLocalGroupCollectionSet())
                 return ret;
-            ret.LocalGroups = _localGroupProcessor.GetLocalGroups(resolvedSearchResult.DisplayName,
-                resolvedSearchResult.DomainSid, resolvedSearchResult.Domain, resolvedSearchResult.IsDomainController).ToArray();
+
+            var localGroups = _localGroupProcessor.GetLocalGroups(resolvedSearchResult.DisplayName,
+                resolvedSearchResult.ObjectId, resolvedSearchResult.Domain,
+                resolvedSearchResult.IsDomainController);
+            ret.LocalGroups = await localGroups.ToArrayAsync();
             
             return ret;
         }
