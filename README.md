@@ -1,8 +1,10 @@
 ---
-SharpHound Open Source Client version: 1.0.4
+SharpHound Open Source Client version: 1.1.1
 ---
 
 # SharpHound
+
+![GitHub all releases](https://img.shields.io/github/downloads/BloodHoundAD/SharpHound/total)
 
 ## Get SharpHound
 
@@ -107,9 +109,9 @@ dotnet build
 
   -l, --Loop                 Loop computer collection
 
-  --loopduration             Loop duration (Defaults to 2 hours - 00:02:00)
+  --loopduration             Loop duration (hh:mm:ss - 05:00:00 is 5 hours, default: 2 hrs)
 
-  --loopinterval             Add delay between loops (Example - 00:00:01 is 1 minute)
+  --loopinterval             Add delay between loops (hh:mm:ss - 00:03:00 is 3 minute)
 
   --statusinterval           (Default: 30000) Interval in which to display status in milliseconds
 
