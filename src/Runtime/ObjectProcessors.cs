@@ -17,6 +17,7 @@ namespace Sharphound.Runtime
     {
         private const string StatusSuccess = "Success";
         private readonly ACLProcessor _aclProcessor;
+        private readonly CertAbuseProcessor _certAbuseProcessor;
         private readonly CancellationToken _cancellationToken;
         private readonly ComputerAvailability _computerAvailability;
         private readonly ComputerSessionProcessor _computerSessionProcessor;
@@ -40,6 +41,7 @@ namespace Sharphound.Runtime
             _ldapPropertyProcessor = new LDAPPropertyProcessor(context.LDAPUtils);
             _domainTrustProcessor = new DomainTrustProcessor(context.LDAPUtils);
             _computerAvailability = new ComputerAvailability(context.PortScanTimeout, skipPortScan: context.Flags.SkipPortScan, skipPasswordCheck: context.Flags.SkipPasswordAgeCheck);
+            _certAbuseProcessor = new CertAbuseProcessor(context.LDAPUtils);
             _computerSessionProcessor = new ComputerSessionProcessor(context.LDAPUtils);
             _groupProcessor = new GroupProcessor(context.LDAPUtils);
             _containerProcessor = new ContainerProcessor(context.LDAPUtils);
@@ -70,6 +72,10 @@ namespace Sharphound.Runtime
                     return await ProcessOUObject(entry, resolvedSearchResult);
                 case Label.Container:
                     return ProcessContainerObject(entry, resolvedSearchResult);
+                case Label.CertAuthority:
+                    return await ProcessCertAuthority(entry, resolvedSearchResult);
+                case Label.CertTemplate:
+                    return await ProcessCertTemplate(entry, resolvedSearchResult);
                 case Label.Base:
                     return null;
                 default:
@@ -493,6 +499,91 @@ namespace Sharphound.Runtime
                 //ret.Properties = ContextUtils.Merge(ret.Properties, LDAPPropertyProcessor.)
             }
                 
+
+            return ret;
+        }
+        private async Task<CertAuthority> ProcessCertAuthority(ISearchResultEntry entry, ResolvedSearchResult resolvedSearchResult)
+        {
+            var ret = new CertAuthority
+            {
+                ObjectIdentifier = resolvedSearchResult.ObjectId
+            };
+            
+            ret.Properties.Add("domain", resolvedSearchResult.Domain);
+            ret.Properties.Add("name", resolvedSearchResult.DisplayName);
+            ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
+            ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
+            
+            if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
+            {
+                var caProps = LDAPPropertyProcessor.ReadCAProperties(entry);
+                ret.Properties.Merge(caProps);
+
+                ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
+                ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
+
+                var rawCertificate = entry.GetByteProperty(LDAPProperties.CACertificate);
+                if (rawCertificate != null)
+                {
+                    ret.Certificate = new Certificate(rawCertificate);
+                }
+
+                // Enabled cert templates
+                var certTemplatesLocation = _context.LDAPUtils.BuildLdapPath(DirectoryPaths.CertTemplateLocation, resolvedSearchResult.Domain);
+                ret.EnabledCertTemplates = _certAbuseProcessor.ProcessCertTemplates(entry.GetArrayProperty(LDAPProperties.CertificateTemplates), certTemplatesLocation).ToArray();
+
+                ret.IsEnterpriseCA = _certAbuseProcessor.IsEnterpriseCA(entry.DistinguishedName);
+                ret.IsRootCA = _certAbuseProcessor.IsRootCA(entry.DistinguishedName);
+
+                if (ret.IsEnterpriseCA) {
+                    // Get CASecurity from AD object.
+                    // The CASecurity exist in registry of the CA server as well and we prefer to use the values from registry as they are the ground truth but we collect it from AD in case we cannot read from the CA server registry.
+                    // If changes are made on the CA server, registry and the AD object is updated. If changes are made directly on the AD object, the CA server registry is not updated.
+                    ret.CASecurity = _certAbuseProcessor.ProcessCAPermissions(entry.GetByteProperty(LDAPProperties.SecurityDescriptor), resolvedSearchResult.Domain, resolvedSearchResult.DisplayName, false).ToArray();
+                }
+
+                var caName = entry.GetProperty(LDAPProperties.Name);
+                var dnsHostName = entry.GetProperty(LDAPProperties.DNSHostName);
+
+                if (caName != null && dnsHostName != null)
+                {
+                    ret.HostingComputer = await _context.LDAPUtils.ResolveHostToSid(dnsHostName, resolvedSearchResult.Domain);
+
+                    // Attempt to collect properties from CA server registry.
+                    var regCASecurity = _certAbuseProcessor.GetCASecurity(dnsHostName, caName);
+                    var enrollmentAgentRights = _certAbuseProcessor.GetEnrollmentAgentRights(dnsHostName, caName);
+                    var isUserSpecifiesSANEnabled = _certAbuseProcessor.IsUserSpecifiesSanEnabled(dnsHostName, caName);
+
+                    // Process registry data
+                    var regCASecurityProcessed = _certAbuseProcessor.ProcessCAPermissions(regCASecurity, resolvedSearchResult.Domain, resolvedSearchResult.DisplayName, true).ToArray();
+                    var enrollmentAgentRightsProcessed = _certAbuseProcessor.ProcessEAPermissions(enrollmentAgentRights).ToArray();
+
+                    ret.CARegistryData = new CARegistryData(regCASecurityProcessed, enrollmentAgentRightsProcessed, isUserSpecifiesSANEnabled);
+                }
+            }
+
+            return ret;
+        }
+
+        private async Task<CertTemplate> ProcessCertTemplate(ISearchResultEntry entry, ResolvedSearchResult resolvedSearchResult)
+        {
+            var ret = new CertTemplate
+            {
+                ObjectIdentifier = resolvedSearchResult.ObjectId
+            };
+
+            ret.Properties.Add("domain", resolvedSearchResult.Domain);
+            ret.Properties.Add("name", resolvedSearchResult.DisplayName);
+            ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
+            ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
+
+            if ((_methods & ResolvedCollectionMethod.ObjectProps) == 0) return ret;
+
+            var certTemplatesProps = LDAPPropertyProcessor.ReadCertTemplateProperties(entry);
+            ret.Properties.Merge(certTemplatesProps);
+
+            ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
+            ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
 
             return ret;
         }

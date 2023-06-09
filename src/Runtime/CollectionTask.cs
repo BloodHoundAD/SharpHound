@@ -69,8 +69,11 @@ namespace Sharphound.Runtime
             _outputWriter.StartStatusOutput();
             var compStatusTask = _compStatusWriter?.StartWriter();
             var producerTask = _producer.Produce();
-
             await producerTask;
+
+            // Collect from Configuration NC
+            var producerTaskNC = _producer.ProduceConfigNC();
+            await producerTaskNC;
 
             _log.LogInformation("Producer has finished, closing LDAP channel");
             _ldapChannel.Writer.Complete();

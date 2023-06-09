@@ -19,13 +19,19 @@ namespace Sharphound.Producers
     {
         private static bool _stealthTargetsBuilt;
         private readonly IEnumerable<string> _props;
+        private readonly IEnumerable<string> _propsConfigNC;
         private readonly LDAPFilter _query;
+        private readonly LDAPFilter _queryConfigNC;
 
         public StealthProducer(IContext context, Channel<ISearchResultEntry> channel, Channel<OutputBase> outputChannel) : base(context, channel, outputChannel)
         {
             var ldapData = CreateLDAPData();
             _query = ldapData.Filter;
             _props = ldapData.Props;
+
+            var configNCData = CreateConfigNCData();
+            _queryConfigNC = configNCData.Filter;
+            _propsConfigNC = configNCData.Props;
         }
 
         /// <summary>
@@ -45,6 +51,23 @@ namespace Sharphound.Producers
                          _props.ToArray(), cancellationToken,
                          Context.DomainName, adsPath: Context.SearchBase))
                 await Channel.Writer.WriteAsync(searchResult, cancellationToken);
+        }
+
+        public override async Task ProduceConfigNC()
+        {
+            var cancellationToken = Context.CancellationTokenSource.Token;
+            //If we haven't generated our stealth targets, we'll build it now
+            if (!_stealthTargetsBuilt)
+                BuildStealthTargets();
+
+            var configAdsPath = Context.LDAPUtils.GetConfigurationPath(Context.DomainName);
+
+            //Output our stealth targets to the queue
+            foreach (var searchResult in Context.LDAPUtils.QueryLDAP(_queryConfigNC.GetFilter(), SearchScope.Subtree,
+                         _propsConfigNC.ToArray(), cancellationToken,
+                         Context.DomainName, adsPath: configAdsPath))
+                await Channel.Writer.WriteAsync(searchResult, cancellationToken);
+
         }
 
         private async void BuildStealthTargets()
