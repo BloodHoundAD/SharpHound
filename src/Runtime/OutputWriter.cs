@@ -28,7 +28,10 @@ namespace Sharphound.Runtime
         private readonly Channel<OutputBase> _outputChannel;
         private readonly Timer _statusTimer;
         private readonly JsonDataWriter<User> _userOutput;
-        private readonly JsonDataWriter<CertAuthority> _certAuthorityOutput;
+        private readonly JsonDataWriter<RootCA> _rootCAOutput;
+        private readonly JsonDataWriter<AIACA> _aIACAOutput;
+        private readonly JsonDataWriter<EnrollmentService> _enrollmentServiceOutput;
+        private readonly JsonDataWriter<NTAuthCert> _nTAuthCertOutput;
         private readonly JsonDataWriter<CertTemplate> _certTemplateOutput;
 
 
@@ -47,7 +50,10 @@ namespace Sharphound.Runtime
             _gpoOutput = new JsonDataWriter<GPO>(_context, DataType.GPOs);
             _ouOutput = new JsonDataWriter<OU>(_context, DataType.OUs);
             _containerOutput = new JsonDataWriter<Container>(_context, DataType.Containers);
-            _certAuthorityOutput = new JsonDataWriter<CertAuthority>(_context, DataType.CertAuthorities);
+            _rootCAOutput = new JsonDataWriter<RootCA>(_context, DataType.RootCAs);
+            _aIACAOutput = new JsonDataWriter<AIACA>(_context, DataType.AIACAs);
+            _enrollmentServiceOutput = new JsonDataWriter<EnrollmentService>(_context, DataType.EnrollmentServices);
+            _nTAuthCertOutput = new JsonDataWriter<NTAuthCert>(_context, DataType.NTAuthCerts);
             _certTemplateOutput = new JsonDataWriter<CertTemplate>(_context, DataType.CertTemplates);
 
             _runTimer = new Stopwatch();
@@ -119,8 +125,17 @@ namespace Sharphound.Runtime
                     case User user:
                         await _userOutput.AcceptObject(user);
                         break;
-                    case CertAuthority certAuthority:
-                        await _certAuthorityOutput.AcceptObject(certAuthority);
+                    case RootCA rootCA:
+                        await _rootCAOutput.AcceptObject(rootCA);
+                        break;
+                    case AIACA aIACA:
+                        await _aIACAOutput.AcceptObject(aIACA);
+                        break;
+                    case EnrollmentService enrollmentService:
+                        await _enrollmentServiceOutput.AcceptObject(enrollmentService);
+                        break;
+                    case NTAuthCert nTAuthCert:
+                        await _nTAuthCertOutput.AcceptObject(nTAuthCert);
                         break;
                     case CertTemplate certTemplate:
                         await _certTemplateOutput.AcceptObject(certTemplate);
@@ -143,7 +158,10 @@ namespace Sharphound.Runtime
             await _gpoOutput.FlushWriter();
             await _ouOutput.FlushWriter();
             await _containerOutput.FlushWriter();
-            await _certAuthorityOutput.FlushWriter();
+            await _rootCAOutput.FlushWriter();
+            await _aIACAOutput.FlushWriter();
+            await _enrollmentServiceOutput.FlushWriter();
+            await _nTAuthCertOutput.FlushWriter();
             await _certTemplateOutput.FlushWriter();
             CloseOutput();
             var fileName = ZipFiles();
@@ -172,7 +190,9 @@ namespace Sharphound.Runtime
             {
                 _computerOutput.GetFilename(), _userOutput.GetFilename(), _groupOutput.GetFilename(),
                 _containerOutput.GetFilename(), _domainOutput.GetFilename(), _gpoOutput.GetFilename(),
-                _ouOutput.GetFilename(), _certAuthorityOutput.GetFilename(), _certTemplateOutput.GetFilename()
+                _ouOutput.GetFilename(), _rootCAOutput.GetFilename(), _aIACAOutput.GetFilename(),
+                _enrollmentServiceOutput.GetFilename(), _nTAuthCertOutput.GetFilename(),
+                _certTemplateOutput.GetFilename()
             });
 
             foreach (var entry in fileList.Where(x => !string.IsNullOrEmpty(x)))
