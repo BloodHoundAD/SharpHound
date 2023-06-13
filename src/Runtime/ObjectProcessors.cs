@@ -599,11 +599,6 @@ namespace Sharphound.Runtime
                 var certTemplatesLocation = _context.LDAPUtils.BuildLdapPath(DirectoryPaths.CertTemplateLocation, resolvedSearchResult.Domain);
                 ret.EnabledCertTemplates = _certAbuseProcessor.ProcessCertTemplates(entry.GetArrayProperty(LDAPProperties.CertificateTemplates), certTemplatesLocation).ToArray();
 
-                // Get CASecurity from AD object.
-                // The CASecurity exist in registry of the CA server as well and we prefer to use the values from registry as they are the ground truth but we collect it from AD in case we cannot read from the CA server registry.
-                // If changes are made on the CA server, registry and the AD object is updated. If changes are made directly on the AD object, the CA server registry is not updated.
-                ret.CASecurity = _certAbuseProcessor.ProcessEnrollmentServicePermissions(entry.GetByteProperty(LDAPProperties.SecurityDescriptor), resolvedSearchResult.Domain, resolvedSearchResult.DisplayName, false).ToArray();
-
                 var caName = entry.GetProperty(LDAPProperties.Name);
                 var dnsHostName = entry.GetProperty(LDAPProperties.DNSHostName);
 
@@ -612,12 +607,15 @@ namespace Sharphound.Runtime
                     ret.HostingComputer = await _context.LDAPUtils.ResolveHostToSid(dnsHostName, resolvedSearchResult.Domain);
 
                     // Attempt to collect properties from CA server registry.
-                    var regCASecurity = _certAbuseProcessor.GetCASecurity(dnsHostName, caName);
                     var enrollmentAgentRights = _certAbuseProcessor.GetEnrollmentAgentRights(dnsHostName, caName);
                     var isUserSpecifiesSANEnabled = _certAbuseProcessor.IsUserSpecifiesSanEnabled(dnsHostName, caName);
 
+                    // The CASecurity exist in the AD object DACL and in registry of the CA server. We prefer to use the values from registry as they are the ground truth.
+                    // If changes are made on the CA server, registry and the AD object is updated. If changes are made directly on the AD object, the CA server registry is not updated.
+                    var regCASecurity = _certAbuseProcessor.GetCASecurity(dnsHostName, caName);
+
                     // Process registry data
-                    var regCASecurityProcessed = _certAbuseProcessor.ProcessEnrollmentServicePermissions(regCASecurity, resolvedSearchResult.Domain, resolvedSearchResult.DisplayName, true).ToArray();
+                    var regCASecurityProcessed = _certAbuseProcessor.ProcessRegistryEnrollmentPermissions(regCASecurity, resolvedSearchResult.Domain, resolvedSearchResult.DisplayName).ToArray();
                     var enrollmentAgentRightsProcessed = _certAbuseProcessor.ProcessEAPermissions(enrollmentAgentRights).ToArray();
 
                     ret.CARegistryData = new CARegistryData(regCASecurityProcessed, enrollmentAgentRightsProcessed, isUserSpecifiesSANEnabled);
