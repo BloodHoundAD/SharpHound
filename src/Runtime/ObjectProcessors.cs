@@ -645,11 +645,10 @@ namespace Sharphound.Runtime
                 ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
                 ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
 
-                var rawCertificate = entry.GetByteProperty(LDAPProperties.CACertificate);
-                if (rawCertificate != null)
-                {
-                    ret.Certificate = new Certificate(rawCertificate);
-                }
+                var rawCertificates = entry.GetByteArrayProperty(LDAPProperties.CACertificate);
+                var certificates = from rawCertificate in rawCertificates
+                                   select new Certificate(rawCertificate);
+                ret.Certificates = certificates.ToArray();
             }
 
             return ret;
