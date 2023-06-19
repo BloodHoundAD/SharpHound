@@ -600,8 +600,7 @@ namespace Sharphound.Runtime
                 }
 
                 // Enabled cert templates
-                var certTemplatesLocation = _context.LDAPUtils.BuildLdapPath(DirectoryPaths.CertTemplateLocation, resolvedSearchResult.Domain);
-                ret.EnabledCertTemplates = _certAbuseProcessor.ProcessCertTemplates(entry.GetArrayProperty(LDAPProperties.CertificateTemplates), certTemplatesLocation).ToArray();
+                ret.EnabledCertTemplates = _certAbuseProcessor.ProcessCertTemplates(entry.GetArrayProperty(LDAPProperties.CertificateTemplates), resolvedSearchResult.Domain).ToArray();
 
                 var caName = entry.GetProperty(LDAPProperties.Name);
                 var dnsHostName = entry.GetProperty(LDAPProperties.DNSHostName);
@@ -620,7 +619,7 @@ namespace Sharphound.Runtime
 
                     // Process registry data
                     var regCASecurityProcessed = _certAbuseProcessor.ProcessRegistryEnrollmentPermissions(regCASecurity, resolvedSearchResult.Domain, resolvedSearchResult.DisplayName).ToArray();
-                    var enrollmentAgentRightsProcessed = _certAbuseProcessor.ProcessEAPermissions(enrollmentAgentRights).ToArray();
+                    var enrollmentAgentRightsProcessed = _certAbuseProcessor.ProcessEAPermissions(enrollmentAgentRights, resolvedSearchResult.Domain, resolvedSearchResult.DisplayName).ToArray();
 
                     ret.CARegistryData = new CARegistryData(regCASecurityProcessed, enrollmentAgentRightsProcessed, isUserSpecifiesSANEnabled);
                 }
