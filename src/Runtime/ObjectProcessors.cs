@@ -608,20 +608,25 @@ namespace Sharphound.Runtime
                 if (caName != null && dnsHostName != null)
                 {
                     ret.HostingComputer = await _context.LDAPUtils.ResolveHostToSid(dnsHostName, resolvedSearchResult.Domain);
-
                     // Attempt to collect properties from CA server registry.
-                    var enrollmentAgentRights = _certAbuseProcessor.GetEnrollmentAgentRights(dnsHostName, caName);
-                    var isUserSpecifiesSANEnabled = _certAbuseProcessor.IsUserSpecifiesSanEnabled(dnsHostName, caName);
+                    (bool eARightsCollected, byte[] eARightsValue) = _certAbuseProcessor.GetEnrollmentAgentRights(dnsHostName, caName);
+                    (bool sANEnabledCollected, bool sANEnabledValue) = _certAbuseProcessor.IsUserSpecifiesSanEnabled(dnsHostName, caName);
 
                     // The CASecurity exist in the AD object DACL and in registry of the CA server. We prefer to use the values from registry as they are the ground truth.
                     // If changes are made on the CA server, registry and the AD object is updated. If changes are made directly on the AD object, the CA server registry is not updated.
-                    var regCASecurity = _certAbuseProcessor.GetCASecurity(dnsHostName, caName);
+                    (bool cASecurityCollected, byte[] cASecurityValue) = _certAbuseProcessor.GetCASecurity(dnsHostName, caName);
 
                     // Process registry data
-                    var regCASecurityProcessed = _certAbuseProcessor.ProcessRegistryEnrollmentPermissions(regCASecurity, resolvedSearchResult.Domain, resolvedSearchResult.DisplayName).ToArray();
-                    var enrollmentAgentRightsProcessed = _certAbuseProcessor.ProcessEAPermissions(enrollmentAgentRights, resolvedSearchResult.Domain, resolvedSearchResult.DisplayName).ToArray();
+                    var regCASecurityProcessed = _certAbuseProcessor.ProcessRegistryEnrollmentPermissions(cASecurityValue, resolvedSearchResult.Domain, resolvedSearchResult.DisplayName).ToArray();
+                    var enrollmentAgentRightsProcessed = _certAbuseProcessor.ProcessEAPermissions(eARightsValue, resolvedSearchResult.Domain, resolvedSearchResult.DisplayName).ToArray();
 
-                    ret.CARegistryData = new CARegistryData(regCASecurityProcessed, enrollmentAgentRightsProcessed, isUserSpecifiesSANEnabled);
+                    ret.CARegistryData = new CARegistryData(
+                        regCASecurityProcessed,
+                        enrollmentAgentRightsProcessed,
+                        sANEnabledValue,
+                        cASecurityCollected,
+                        eARightsCollected,
+                        sANEnabledCollected);
                 }
             }
 
