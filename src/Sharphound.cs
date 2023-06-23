@@ -21,6 +21,7 @@ using System.DirectoryServices.Protocols;
 using System.IO;
 using System.Linq;
 using System.Security.Principal;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using CommandLine;
@@ -389,8 +390,31 @@ namespace Sharphound
                     {
                         if (options.LDAPPassword == null)
                         {
-                            logger.LogError("You must specify LDAPPassword if using the LDAPUsername options");
-                            return;
+                            logger.LogInformation("Prompting for interactive LDAPPassword");
+                            StringBuilder passwordBuilder = new StringBuilder();
+                            Console.Write("LDAPPassword: ");
+                            while (true)
+                            {
+                                ConsoleKeyInfo key = Console.ReadKey(true);
+                                if (key.Key == ConsoleKey.Enter)
+                                    break;
+                                
+                                if (key.Key == ConsoleKey.Backspace)
+                                {
+                                    // Don't allow user to backspace through prompt
+                                    if (passwordBuilder.Length > 0)
+                                    {
+                                        passwordBuilder.Length--;
+                                        Console.Write("\b \b");
+                                    }
+                                    continue;
+                                }
+
+                                passwordBuilder.Append(key.KeyChar);
+                                Console.Write("*");
+                            }
+                            Console.WriteLine();
+                            options.LDAPPassword = passwordBuilder.ToString();
                         }
 
                         ldapOptions.Username = options.LDAPUsername;
