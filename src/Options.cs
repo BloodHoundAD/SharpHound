@@ -73,7 +73,7 @@ namespace Sharphound
         [Option(HelpText = "Username for LDAP", Default = null)]
         public string LDAPUsername { get; set; }
 
-        [Option(HelpText = "Password for LDAP", Default = null)]
+        [Option(HelpText = "Password for LDAP. If not specified, an interactive prompt will be used", Default = null)]
         public string LDAPPassword { get; set; }
 
         [Option(HelpText = "Override domain controller to pull LDAP from. This option can result in data loss",
