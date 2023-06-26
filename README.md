@@ -72,7 +72,7 @@ dotnet build
 
   --ldapusername             Username for LDAP
 
-  --ldappassword             Password for LDAP
+  --ldappassword             Password for LDAP. If not specified, an interactive prompt will be used
 
   --domaincontroller         Override domain controller to pull LDAP from. This option can result in data loss
 
