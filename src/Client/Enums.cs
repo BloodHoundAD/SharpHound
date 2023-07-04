@@ -24,6 +24,7 @@
         Default,
         DCOnly,
         ComputerOnly,
+        CARegistry,
         All
     }
 }

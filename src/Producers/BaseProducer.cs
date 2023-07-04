@@ -155,6 +155,12 @@ namespace Sharphound.Producers
                     query = query.AddContainers();
                     props.AddRange(CommonProperties.ContainerProps);
                 }
+
+                if ((methods & ResolvedCollectionMethod.CARegistry) != 0)
+                {
+                    query = query.AddEnterpriseCertificationAuthorities();
+                    props.AddRange(CommonProperties.CertAbuseProps);
+                }
             }
 
             if (Context.LdapFilter != null) query.AddFilter(Context.LdapFilter, true);

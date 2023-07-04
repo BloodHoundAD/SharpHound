@@ -32,6 +32,7 @@
             SPNTargets - Collects SPN targets (currently only MSSQL)
             Default - Collects Group Membership, Local Admin, Sessions, Containers, ACLs and Domain Trusts
             DcOnly - Collects Group Membership, ACLs, ObjectProps, Trusts, Containers, and GPO Admins
+            CARegistry - Collect ADCS properties from registry of Certificate Authority servers
             All - Collect all data
 
         This can be a list of comma separated valued as well to run multiple collection methods!
