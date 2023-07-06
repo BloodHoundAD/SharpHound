@@ -521,13 +521,16 @@ namespace Sharphound.Runtime
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
             
+            if ((_methods & ResolvedCollectionMethod.ACL) != 0)
+            {
+                ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
+                ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
+            }
+
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
             {
                 var props = LDAPPropertyProcessor.ReadRootCAProperties(entry);
                 ret.Properties.Merge(props);
-
-                ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
-                ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
 
                 // Cert thumbprint
                 var rawCertificate = entry.GetByteProperty(LDAPProperties.CACertificate);
@@ -551,14 +554,17 @@ namespace Sharphound.Runtime
             ret.Properties.Add("name", resolvedSearchResult.DisplayName);
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
-            
+
+            if ((_methods & ResolvedCollectionMethod.ACL) != 0)
+            {
+                ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
+                ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
+            }
+
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
             {
                 var props = LDAPPropertyProcessor.ReadAIACAProperties(entry);
                 ret.Properties.Merge(props);
-
-                ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
-                ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
                 
                 // Cert thumbprint
                 var rawCertificate = entry.GetByteProperty(LDAPProperties.CACertificate);
@@ -587,14 +593,17 @@ namespace Sharphound.Runtime
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
             ret.Properties.Add("caname", caName);
             ret.Properties.Add("dnshostname", dnsHostName);
-            
+                        
+            if ((_methods & ResolvedCollectionMethod.ACL) != 0)
+            {
+                ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
+                ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
+            }
+
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
             {
                 var props = LDAPPropertyProcessor.ReadEnrollmentServiceProperties(entry);
                 ret.Properties.Merge(props);
-
-                ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
-                ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
 
                 // Certificate
                 var rawCertificate = entry.GetByteProperty(LDAPProperties.CACertificate);
@@ -647,14 +656,17 @@ namespace Sharphound.Runtime
             ret.Properties.Add("name", resolvedSearchResult.DisplayName);
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
+                        
+            if ((_methods & ResolvedCollectionMethod.ACL) != 0)
+            {
+                ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
+                ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
+            }
             
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
             {
                 var props = LDAPPropertyProcessor.ReadNTAuthCertProperties(entry);
                 ret.Properties.Merge(props);
-
-                ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
-                ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
 
                 // Cert thumbprints
                 var rawCertificates = entry.GetByteArrayProperty(LDAPProperties.CACertificate);
@@ -678,14 +690,17 @@ namespace Sharphound.Runtime
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
 
-            if ((_methods & ResolvedCollectionMethod.ObjectProps) == 0) return ret;
+            if ((_methods & ResolvedCollectionMethod.ACL) != 0)
+            {
+                ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
+                ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
+            }
 
-            var certTemplatesProps = LDAPPropertyProcessor.ReadCertTemplateProperties(entry);
-            ret.Properties.Merge(certTemplatesProps);
-
-            ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
-            ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
-
+            if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
+            {
+                var certTemplatesProps = LDAPPropertyProcessor.ReadCertTemplateProperties(entry);
+                ret.Properties.Merge(certTemplatesProps);
+            }
             return ret;
         }
     }
