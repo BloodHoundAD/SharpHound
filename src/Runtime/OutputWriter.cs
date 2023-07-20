@@ -31,7 +31,7 @@ namespace Sharphound.Runtime
         private readonly JsonDataWriter<RootCA> _rootCAOutput;
         private readonly JsonDataWriter<AIACA> _aIACAOutput;
         private readonly JsonDataWriter<EnrollmentService> _enrollmentServiceOutput;
-        private readonly JsonDataWriter<NTAuthCert> _nTAuthCertOutput;
+        private readonly JsonDataWriter<NTAuthStore> _nTAuthStoreOutput;
         private readonly JsonDataWriter<CertTemplate> _certTemplateOutput;
 
 
@@ -53,7 +53,7 @@ namespace Sharphound.Runtime
             _rootCAOutput = new JsonDataWriter<RootCA>(_context, DataType.RootCAs);
             _aIACAOutput = new JsonDataWriter<AIACA>(_context, DataType.AIACAs);
             _enrollmentServiceOutput = new JsonDataWriter<EnrollmentService>(_context, DataType.EnrollmentServices);
-            _nTAuthCertOutput = new JsonDataWriter<NTAuthCert>(_context, DataType.NTAuthCerts);
+            _nTAuthStoreOutput = new JsonDataWriter<NTAuthStore>(_context, DataType.NTAuthStores);
             _certTemplateOutput = new JsonDataWriter<CertTemplate>(_context, DataType.CertTemplates);
 
             _runTimer = new Stopwatch();
@@ -134,8 +134,8 @@ namespace Sharphound.Runtime
                     case EnrollmentService enrollmentService:
                         await _enrollmentServiceOutput.AcceptObject(enrollmentService);
                         break;
-                    case NTAuthCert nTAuthCert:
-                        await _nTAuthCertOutput.AcceptObject(nTAuthCert);
+                    case NTAuthStore nTAuthStore:
+                        await _nTAuthStoreOutput.AcceptObject(nTAuthStore);
                         break;
                     case CertTemplate certTemplate:
                         await _certTemplateOutput.AcceptObject(certTemplate);
@@ -161,7 +161,7 @@ namespace Sharphound.Runtime
             await _rootCAOutput.FlushWriter();
             await _aIACAOutput.FlushWriter();
             await _enrollmentServiceOutput.FlushWriter();
-            await _nTAuthCertOutput.FlushWriter();
+            await _nTAuthStoreOutput.FlushWriter();
             await _certTemplateOutput.FlushWriter();
             CloseOutput();
             var fileName = ZipFiles();
@@ -191,7 +191,7 @@ namespace Sharphound.Runtime
                 _computerOutput.GetFilename(), _userOutput.GetFilename(), _groupOutput.GetFilename(),
                 _containerOutput.GetFilename(), _domainOutput.GetFilename(), _gpoOutput.GetFilename(),
                 _ouOutput.GetFilename(), _rootCAOutput.GetFilename(), _aIACAOutput.GetFilename(),
-                _enrollmentServiceOutput.GetFilename(), _nTAuthCertOutput.GetFilename(),
+                _enrollmentServiceOutput.GetFilename(), _nTAuthStoreOutput.GetFilename(),
                 _certTemplateOutput.GetFilename()
             });
 

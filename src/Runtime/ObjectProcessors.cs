@@ -78,8 +78,8 @@ namespace Sharphound.Runtime
                     return await ProcessAIACA(entry, resolvedSearchResult);
                 case Label.EnrollmentService:
                     return await ProcessEnrollmentService(entry, resolvedSearchResult);
-                case Label.NTAuthCert:
-                    return await ProcessNTAuthCert(entry, resolvedSearchResult);
+                case Label.NTAuthStore:
+                    return await ProcessNTAuthStore(entry, resolvedSearchResult);
                 case Label.CertTemplate:
                     return await ProcessCertTemplate(entry, resolvedSearchResult);
                 case Label.Base:
@@ -645,9 +645,9 @@ namespace Sharphound.Runtime
             return ret;
         }
         
-        private async Task<NTAuthCert> ProcessNTAuthCert(ISearchResultEntry entry, ResolvedSearchResult resolvedSearchResult)
+        private async Task<NTAuthStore> ProcessNTAuthStore(ISearchResultEntry entry, ResolvedSearchResult resolvedSearchResult)
         {
-            var ret = new NTAuthCert
+            var ret = new NTAuthStore
             {
                 ObjectIdentifier = resolvedSearchResult.ObjectId
             };
@@ -665,7 +665,7 @@ namespace Sharphound.Runtime
             
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
             {
-                var props = LDAPPropertyProcessor.ReadNTAuthCertProperties(entry);
+                var props = LDAPPropertyProcessor.ReadNTAuthStoreProperties(entry);
                 ret.Properties.Merge(props);
 
                 // Cert thumbprints
