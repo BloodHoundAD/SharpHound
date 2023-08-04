@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Sharphound.Client;
 using SharpHoundCommonLib;
 using SharpHoundCommonLib.LDAPQueries;
+using SharpHoundCommonLib.OutputTypes;
 
 namespace Sharphound.Producers
 {
@@ -20,7 +21,7 @@ namespace Sharphound.Producers
         private readonly IEnumerable<string> _props;
         private readonly LDAPFilter _query;
 
-        public StealthProducer(IContext context, Channel<ISearchResultEntry> channel) : base(context, channel)
+        public StealthProducer(IContext context, Channel<ISearchResultEntry> channel, Channel<OutputBase> outputChannel) : base(context, channel, outputChannel)
         {
             var ldapData = CreateLDAPData();
             _query = ldapData.Filter;
@@ -81,7 +82,7 @@ namespace Sharphound.Producers
                 Parallel.ForEach(Context.LDAPUtils.QueryLDAP(
                     query.GetFilter(),
                     SearchScope.Subtree,
-                    new[] { "homedirectory", "scriptpath", "profilepath" }, domain), searchResult =>
+                    new[] { "homedirectory", "scriptpath", "profilepath" }, domain.Name), searchResult =>
                 {
                     //Grab any properties that exist, filter out null values
                     var poss = new[]

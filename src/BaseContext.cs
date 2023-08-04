@@ -114,7 +114,7 @@ namespace Sharphound
             return finalPath;
         }
 
-        public string[] Domains { get; set; }
+        public EnumerationDomain[] Domains { get; set; }
 
         // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
         // ~Context()

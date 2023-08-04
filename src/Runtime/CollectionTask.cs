@@ -49,11 +49,11 @@ namespace Sharphound.Runtime
             _outputWriter = new OutputWriter(context, _outputChannel);
 
             if (context.Flags.Stealth)
-                _producer = new StealthProducer(context, _ldapChannel);
+                _producer = new StealthProducer(context, _ldapChannel, _outputChannel);
             else if (context.ComputerFile != null)
-                _producer = new ComputerFileProducer(context, _ldapChannel);
+                _producer = new ComputerFileProducer(context, _ldapChannel, _outputChannel);
             else
-                _producer = new LdapProducer(context, _ldapChannel);
+                _producer = new LdapProducer(context, _ldapChannel, _outputChannel);
         }
 
         internal async Task<string> StartCollection()

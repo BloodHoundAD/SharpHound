@@ -69,7 +69,7 @@ namespace Sharphound.Client
         string GetCachePath();
         ResolvedCollectionMethod SetupMethodsForLoop();
         string ResolveFileName(string filename, string extension, bool addTimestamp);
-        string[] Domains { get; set; }
+        EnumerationDomain[] Domains { get; set; }
         void UpdateLoopTime();
     }
 }
