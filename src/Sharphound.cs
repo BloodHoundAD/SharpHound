@@ -235,7 +235,7 @@ namespace Sharphound
             var domain = domainObject?.Name ?? context.DomainName;
             if (domain == null)
             {
-                context.Logger.LogError("unable to resolve a domain to use, manually specify one or check spelling");
+                context.Logger.LogError("Unable to resolve a domain to use, manually specify one or check spelling");
                 context.Flags.IsFaulted = true;
             }
             
