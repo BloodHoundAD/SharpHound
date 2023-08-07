@@ -200,6 +200,7 @@ namespace Sharphound.Runtime
 
             if ((_methods & ResolvedCollectionMethod.Session) != 0)
             {
+                await _context.DoDelay();
                 var sessionResult = await _computerSessionProcessor.ReadUserSessions(apiName,
                     resolvedSearchResult.ObjectId, resolvedSearchResult.Domain);
                 ret.Sessions = sessionResult;
@@ -214,6 +215,7 @@ namespace Sharphound.Runtime
 
             if ((_methods & ResolvedCollectionMethod.LoggedOn) != 0)
             {
+                await _context.DoDelay();
                 var privSessionResult = await _computerSessionProcessor.ReadUserSessionsPrivileged(
                     resolvedSearchResult.DisplayName, samAccountName,
                     resolvedSearchResult.ObjectId);
@@ -227,20 +229,25 @@ namespace Sharphound.Runtime
                         ComputerName = resolvedSearchResult.DisplayName
                     }, _cancellationToken);
 
-                var registrySessionResult = await _computerSessionProcessor.ReadUserSessionsRegistry(apiName,
-                    resolvedSearchResult.Domain, resolvedSearchResult.ObjectId);
-                ret.RegistrySessions = registrySessionResult;
-                if (_context.Flags.DumpComputerStatus)
-                    await compStatusChannel.Writer.WriteAsync(new CSVComputerStatus
-                    {
-                        Status = privSessionResult.Collected ? StatusSuccess : privSessionResult.FailureReason,
-                        Task = "RegistrySessions",
-                        ComputerName = resolvedSearchResult.DisplayName
-                    }, _cancellationToken);
+                if (!_context.Flags.NoRegistryLoggedOn)
+                {
+                    await _context.DoDelay();
+                    var registrySessionResult = await _computerSessionProcessor.ReadUserSessionsRegistry(apiName,
+                        resolvedSearchResult.Domain, resolvedSearchResult.ObjectId);
+                    ret.RegistrySessions = registrySessionResult;
+                    if (_context.Flags.DumpComputerStatus)
+                        await compStatusChannel.Writer.WriteAsync(new CSVComputerStatus
+                        {
+                            Status = privSessionResult.Collected ? StatusSuccess : privSessionResult.FailureReason,
+                            Task = "RegistrySessions",
+                            ComputerName = resolvedSearchResult.DisplayName
+                        }, _cancellationToken);
+                }
             }
 
             if ((_methods & ResolvedCollectionMethod.UserRights) != 0)
             {
+                await _context.DoDelay();
                 var userRights = _userRightsAssignmentProcessor.GetUserRightsAssignments(
                                     resolvedSearchResult.DisplayName, resolvedSearchResult.ObjectId,
                                     resolvedSearchResult.Domain, resolvedSearchResult.IsDomainController);
@@ -250,6 +257,7 @@ namespace Sharphound.Runtime
             if (!_methods.IsLocalGroupCollectionSet())
                 return ret;
 
+            await _context.DoDelay();
             var localGroups = _localGroupProcessor.GetLocalGroups(resolvedSearchResult.DisplayName,
                 resolvedSearchResult.ObjectId, resolvedSearchResult.Domain,
                 resolvedSearchResult.IsDomainController);

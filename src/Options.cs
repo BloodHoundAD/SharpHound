@@ -22,6 +22,8 @@ namespace Sharphound
 
         [Option('s', "searchforest", Default = false, HelpText = "Search all available domains in the forest")]
         public bool SearchForest { get; set; }
+        [Option("recursedomains", Default = false, HelpText = "Recurse domain trusts to search")]
+        public bool RecurseDomains { get; set; }
 
         [Option(HelpText = "Stealth Collection (Prefer DCOnly whenever possible!)")]
         public bool Stealth { get; set; }

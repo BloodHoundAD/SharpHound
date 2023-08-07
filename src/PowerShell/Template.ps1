@@ -34,7 +34,7 @@
             DcOnly - Collects Group Membership, ACLs, ObjectProps, Trusts, Containers, and GPO Admins
             All - Collect all data
 
-        This can be a list of comma seperated valued as well to run multiple collection methods!
+        This can be a list of comma separated valued as well to run multiple collection methods!
         
     .PARAMETER Domain
     

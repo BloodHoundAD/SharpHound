@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Sharphound.Client;
 using SharpHoundCommonLib;
+using SharpHoundCommonLib.OutputTypes;
 
 namespace Sharphound.Producers
 {
@@ -15,7 +16,7 @@ namespace Sharphound.Producers
     /// </summary>
     internal class ComputerFileProducer : BaseProducer
     {
-        public ComputerFileProducer(IContext context, Channel<ISearchResultEntry> channel) : base(context, channel)
+        public ComputerFileProducer(IContext context, Channel<ISearchResultEntry> channel, Channel<OutputBase> outputChannel) : base(context, channel, outputChannel)
         {
         }
 

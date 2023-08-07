@@ -23,5 +23,6 @@
         public bool DCOnly { get; set; }
         public bool PrettyPrint { get; set; }
         public bool SearchForest { get; set; }
+        public bool RecurseDomains { get; set; }
     }
 }
