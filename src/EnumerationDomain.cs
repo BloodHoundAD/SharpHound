@@ -1,7 +1,9 @@
-namespace Sharphound;
-
-public class EnumerationDomain
+namespace Sharphound
 {
-    public string Name { get; set; }
-    public string DomainSid { get; set; }
+    public class EnumerationDomain
+    {
+        public string Name { get; set; }
+        public string DomainSid { get; set; }
+    }
 }
+
