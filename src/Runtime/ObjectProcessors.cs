@@ -630,8 +630,8 @@ namespace Sharphound.Runtime
                 (bool cASecurityCollected, byte[] cASecurityValue) = _certAbuseProcessor.GetCASecurity(dnsHostName, caName);
 
                 // Process registry data
-                var regCASecurityProcessed = _certAbuseProcessor.ProcessRegistryEnrollmentPermissions(cASecurityValue, resolvedSearchResult.Domain, resolvedSearchResult.DisplayName).ToArray();
-                var enrollmentAgentRightsProcessed = _certAbuseProcessor.ProcessEAPermissions(eARightsValue, resolvedSearchResult.Domain, resolvedSearchResult.DisplayName).ToArray();
+                var regCASecurityProcessed = await _certAbuseProcessor.ProcessRegistryEnrollmentPermissions(cASecurityValue, resolvedSearchResult.Domain, dnsHostName, ret.HostingComputer).ToArrayAsync();
+                var enrollmentAgentRightsProcessed = await _certAbuseProcessor.ProcessEAPermissions(eARightsValue, resolvedSearchResult.Domain, dnsHostName, ret.HostingComputer).ToArrayAsync();
 
                 ret.CARegistryData = new CARegistryData(
                     regCASecurityProcessed,
