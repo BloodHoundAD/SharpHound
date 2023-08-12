@@ -90,16 +90,16 @@ namespace Sharphound.Producers
             var configNcData = CreateConfigNCData();
             List<string> configurationNCsCollected = new List<string>();
 
-            foreach (var domain in Context.Domains)
+            foreach (EnumerationDomain domain in Context.Domains)
             {
-                var configAdsPath = Context.LDAPUtils.GetConfigurationPath(domain);
+                var configAdsPath = Context.LDAPUtils.GetConfigurationPath(domain.Name);
                 if (!configurationNCsCollected.Contains(configAdsPath))
                 {
-                    Context.Logger.LogInformation("Beginning LDAP search for {Domain} Configuration NC", domain);
+                    Context.Logger.LogInformation("Beginning LDAP search for {Domain} Configuration NC", domain.Name);
 
                     //Do a basic LDAP search and grab results
                     foreach (var searchResult in Context.LDAPUtils.QueryLDAP(configNcData.Filter.GetFilter(), SearchScope.Subtree,
-                                configNcData.Props.Distinct().ToArray(), cancellationToken, domain,
+                                configNcData.Props.Distinct().ToArray(), cancellationToken, domain.Name,
                                 adsPath: configAdsPath,
                                 includeAcl: (Context.ResolvedCollectionMethods & ResolvedCollectionMethod.ACL) != 0))
                     {
@@ -112,7 +112,7 @@ namespace Sharphound.Producers
                 }
                 else
                 {
-                    Context.Logger.LogTrace("Skipping already collected config NC '{path}' for domain {Domain}", configAdsPath, domain);
+                    Context.Logger.LogTrace("Skipping already collected config NC '{path}' for domain {Domain}", configAdsPath, domain.Name);
                 }
             }
             
