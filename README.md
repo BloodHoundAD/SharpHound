@@ -1,5 +1,5 @@
 ---
-SharpHound Open Source Client version: 1.1.1
+SharpHound Open Source Client version: 2.0.0
 ---
 
 # SharpHound
