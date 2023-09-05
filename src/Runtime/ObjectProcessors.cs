@@ -532,11 +532,12 @@ namespace Sharphound.Runtime
                 var props = LDAPPropertyProcessor.ReadRootCAProperties(entry);
                 ret.Properties.Merge(props);
 
-                // Cert thumbprint
+                // Certificate
                 var rawCertificate = entry.GetByteProperty(LDAPProperties.CACertificate);
                 if (rawCertificate != null)
                 {
-                    ret.CertThumbprint = _certAbuseProcessor.GetCertThumbprint(rawCertificate);
+                    ret.Certificate = new Certificate(rawCertificate);
+                    ret.CertThumbprint = ret.Certificate.Thumbprint;
                 }
             }
 
