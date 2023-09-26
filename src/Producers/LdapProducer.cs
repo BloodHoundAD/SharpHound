@@ -31,6 +31,12 @@ namespace Sharphound.Producers
             var log = Context.Logger;
             var utils = Context.LDAPUtils;
 
+            if (Context.Flags.CollectAllProperties)
+            {
+                log.LogDebug("CollectAllProperties set. Changing LDAP properties to *");
+                ldapData.Props = new[] { "*" };
+            }
+
             foreach (var domain in Context.Domains)
             {
                 Context.Logger.LogInformation("Beginning LDAP search for {Domain}", domain);
