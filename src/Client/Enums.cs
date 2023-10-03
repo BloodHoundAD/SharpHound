@@ -25,6 +25,7 @@
         DCOnly,
         ComputerOnly,
         CARegistry,
+        DCRegistry,
         All
     }
 }

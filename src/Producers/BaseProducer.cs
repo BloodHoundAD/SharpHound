@@ -72,6 +72,9 @@ namespace Sharphound.Producers
 
                 if ((methods & ResolvedCollectionMethod.SPNTargets) != 0)
                     props.AddRange(CommonProperties.SPNTargetProps);
+
+                if ((methods & ResolvedCollectionMethod.DCRegistry) != 0)
+                    props.AddRange(CommonProperties.ComputerMethodProps);
             }
             else
             {
@@ -116,6 +119,12 @@ namespace Sharphound.Producers
                 {
                     query = query.AddOUs();
                     props.AddRange(CommonProperties.GPOLocalGroupProps);
+                }
+
+                if ((methods & ResolvedCollectionMethod.DCRegistry) != 0)
+                {
+                    query = query.AddComputers();
+                    props.AddRange(CommonProperties.ComputerMethodProps);
                 }
             }
 

@@ -24,6 +24,7 @@ namespace Sharphound.Runtime
         private readonly ComputerSessionProcessor _computerSessionProcessor;
         private readonly ContainerProcessor _containerProcessor;
         private readonly IContext _context;
+        private readonly DCRegistryProcessor _dCRegistryProcessor;
         private readonly DomainTrustProcessor _domainTrustProcessor;
         private readonly GroupProcessor _groupProcessor;
         private readonly LDAPPropertyProcessor _ldapPropertyProcessor;
@@ -43,6 +44,7 @@ namespace Sharphound.Runtime
             _domainTrustProcessor = new DomainTrustProcessor(context.LDAPUtils);
             _computerAvailability = new ComputerAvailability(context.PortScanTimeout, skipPortScan: context.Flags.SkipPortScan, skipPasswordCheck: context.Flags.SkipPasswordAgeCheck);
             _certAbuseProcessor = new CertAbuseProcessor(context.LDAPUtils);
+            _dCRegistryProcessor = new DCRegistryProcessor(context.LDAPUtils);
             _computerSessionProcessor = new ComputerSessionProcessor(context.LDAPUtils);
             _groupProcessor = new GroupProcessor(context.LDAPUtils);
             _containerProcessor = new ContainerProcessor(context.LDAPUtils);
@@ -209,6 +211,18 @@ namespace Sharphound.Runtime
                 return ret;
             }
 
+            // DCRegistry
+            if (resolvedSearchResult.IsDomainController & 
+                (_methods & ResolvedCollectionMethod.DCRegistry) != 0)
+            {
+                DCRegistryData dCRegistryData = new(){
+                    CertificateMappingMethods = _dCRegistryProcessor.GetCertificateMappingMethods(apiName),
+                    StrongCertificateBindingEnforcement = _dCRegistryProcessor.GetStrongCertificateBindingEnforcement(apiName)
+                };
+                
+                ret.DCRegistryData = dCRegistryData;
+            }
+
             var samAccountName = entry.GetProperty(LDAPProperties.SAMAccountName)?.TrimEnd('$');
 
             if ((_methods & ResolvedCollectionMethod.Session) != 0)
@@ -275,7 +289,7 @@ namespace Sharphound.Runtime
                 resolvedSearchResult.ObjectId, resolvedSearchResult.Domain,
                 resolvedSearchResult.IsDomainController);
             ret.LocalGroups = await localGroups.ToArrayAsync();
-            
+
             return ret;
         }
 
