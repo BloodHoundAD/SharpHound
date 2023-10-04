@@ -32,7 +32,7 @@
     </ItemGroup>
 
     <ItemGroup>
-       <Reference Include="SharpHoundCommonLib, Version=3.0.6.0, Culture=neutral, PublicKeyToken=null">
+       <Reference Include="SharpHoundCommonLib, Version=3.0.8.0, Culture=neutral, PublicKeyToken=null">
             <HintPath>..\SharpHoundCommon\src\CommonLib\bin\Debug\net462\SharpHoundCommonLib.dll</HintPath>
         </Reference>
         <Reference Include="System.DirectoryServices" />
