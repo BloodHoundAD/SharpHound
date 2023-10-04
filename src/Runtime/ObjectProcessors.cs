@@ -76,8 +76,8 @@ namespace Sharphound.Runtime
                     return await ProcessRootCA(entry, resolvedSearchResult);
                 case Label.AIACA:
                     return await ProcessAIACA(entry, resolvedSearchResult);
-                case Label.EnrollmentService:
-                    return await ProcessEnrollmentService(entry, resolvedSearchResult);
+                case Label.EnterpriseCA:
+                    return await ProcessEnterpriseCA(entry, resolvedSearchResult);
                 case Label.NTAuthStore:
                     return await ProcessNTAuthStore(entry, resolvedSearchResult);
                 case Label.CertTemplate:
@@ -578,9 +578,9 @@ namespace Sharphound.Runtime
             return ret;
         }
 
-        private async Task<EnrollmentService> ProcessEnrollmentService(ISearchResultEntry entry, ResolvedSearchResult resolvedSearchResult)
+        private async Task<EnterpriseCA> ProcessEnterpriseCA(ISearchResultEntry entry, ResolvedSearchResult resolvedSearchResult)
         {
-            var ret = new EnrollmentService
+            var ret = new EnterpriseCA
             {
                 ObjectIdentifier = resolvedSearchResult.ObjectId
             };
@@ -603,7 +603,7 @@ namespace Sharphound.Runtime
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
             {
-                var props = LDAPPropertyProcessor.ReadEnrollmentServiceProperties(entry);
+                var props = LDAPPropertyProcessor.ReadEnterpriseCAProperties(entry);
                 ret.Properties.Merge(props);
 
                 // Certificate

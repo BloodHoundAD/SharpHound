@@ -30,7 +30,7 @@ namespace Sharphound.Runtime
         private readonly JsonDataWriter<User> _userOutput;
         private readonly JsonDataWriter<RootCA> _rootCAOutput;
         private readonly JsonDataWriter<AIACA> _aIACAOutput;
-        private readonly JsonDataWriter<EnrollmentService> _enrollmentServiceOutput;
+        private readonly JsonDataWriter<EnterpriseCA> _enterpriseCAOutput;
         private readonly JsonDataWriter<NTAuthStore> _nTAuthStoreOutput;
         private readonly JsonDataWriter<CertTemplate> _certTemplateOutput;
 
@@ -52,7 +52,7 @@ namespace Sharphound.Runtime
             _containerOutput = new JsonDataWriter<Container>(_context, DataType.Containers);
             _rootCAOutput = new JsonDataWriter<RootCA>(_context, DataType.RootCAs);
             _aIACAOutput = new JsonDataWriter<AIACA>(_context, DataType.AIACAs);
-            _enrollmentServiceOutput = new JsonDataWriter<EnrollmentService>(_context, DataType.EnrollmentServices);
+            _enterpriseCAOutput = new JsonDataWriter<EnterpriseCA>(_context, DataType.EnterpriseCAs);
             _nTAuthStoreOutput = new JsonDataWriter<NTAuthStore>(_context, DataType.NTAuthStores);
             _certTemplateOutput = new JsonDataWriter<CertTemplate>(_context, DataType.CertTemplates);
 
@@ -131,8 +131,8 @@ namespace Sharphound.Runtime
                     case AIACA aIACA:
                         await _aIACAOutput.AcceptObject(aIACA);
                         break;
-                    case EnrollmentService enrollmentService:
-                        await _enrollmentServiceOutput.AcceptObject(enrollmentService);
+                    case EnterpriseCA enterpriseCA:
+                        await _enterpriseCAOutput.AcceptObject(enterpriseCA);
                         break;
                     case NTAuthStore nTAuthStore:
                         await _nTAuthStoreOutput.AcceptObject(nTAuthStore);
@@ -160,7 +160,7 @@ namespace Sharphound.Runtime
             await _containerOutput.FlushWriter();
             await _rootCAOutput.FlushWriter();
             await _aIACAOutput.FlushWriter();
-            await _enrollmentServiceOutput.FlushWriter();
+            await _enterpriseCAOutput.FlushWriter();
             await _nTAuthStoreOutput.FlushWriter();
             await _certTemplateOutput.FlushWriter();
             CloseOutput();
@@ -191,7 +191,7 @@ namespace Sharphound.Runtime
                 _computerOutput.GetFilename(), _userOutput.GetFilename(), _groupOutput.GetFilename(),
                 _containerOutput.GetFilename(), _domainOutput.GetFilename(), _gpoOutput.GetFilename(),
                 _ouOutput.GetFilename(), _rootCAOutput.GetFilename(), _aIACAOutput.GetFilename(),
-                _enrollmentServiceOutput.GetFilename(), _nTAuthStoreOutput.GetFilename(),
+                _enterpriseCAOutput.GetFilename(), _nTAuthStoreOutput.GetFilename(),
                 _certTemplateOutput.GetFilename()
             });
 
