@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -23,6 +24,7 @@ namespace Sharphound.Runtime
         private readonly ComputerSessionProcessor _computerSessionProcessor;
         private readonly ContainerProcessor _containerProcessor;
         private readonly IContext _context;
+        private readonly DCRegistryProcessor _dCRegistryProcessor;
         private readonly DomainTrustProcessor _domainTrustProcessor;
         private readonly GroupProcessor _groupProcessor;
         private readonly LDAPPropertyProcessor _ldapPropertyProcessor;
@@ -42,6 +44,7 @@ namespace Sharphound.Runtime
             _domainTrustProcessor = new DomainTrustProcessor(context.LDAPUtils);
             _computerAvailability = new ComputerAvailability(context.PortScanTimeout, skipPortScan: context.Flags.SkipPortScan, skipPasswordCheck: context.Flags.SkipPasswordAgeCheck);
             _certAbuseProcessor = new CertAbuseProcessor(context.LDAPUtils);
+            _dCRegistryProcessor = new DCRegistryProcessor(context.LDAPUtils);
             _computerSessionProcessor = new ComputerSessionProcessor(context.LDAPUtils);
             _groupProcessor = new GroupProcessor(context.LDAPUtils);
             _containerProcessor = new ContainerProcessor(context.LDAPUtils);
@@ -208,6 +211,18 @@ namespace Sharphound.Runtime
                 return ret;
             }
 
+            // DCRegistry
+            if (resolvedSearchResult.IsDomainController & 
+                (_methods & ResolvedCollectionMethod.DCRegistry) != 0)
+            {
+                DCRegistryData dCRegistryData = new(){
+                    CertificateMappingMethods = _dCRegistryProcessor.GetCertificateMappingMethods(apiName),
+                    StrongCertificateBindingEnforcement = _dCRegistryProcessor.GetStrongCertificateBindingEnforcement(apiName)
+                };
+                
+                ret.DCRegistryData = dCRegistryData;
+            }
+
             var samAccountName = entry.GetProperty(LDAPProperties.SAMAccountName)?.TrimEnd('$');
 
             if ((_methods & ResolvedCollectionMethod.Session) != 0)
@@ -274,7 +289,7 @@ namespace Sharphound.Runtime
                 resolvedSearchResult.ObjectId, resolvedSearchResult.Domain,
                 resolvedSearchResult.IsDomainController);
             ret.LocalGroups = await localGroups.ToArrayAsync();
-            
+
             return ret;
         }
 
@@ -531,14 +546,6 @@ namespace Sharphound.Runtime
             {
                 var props = LDAPPropertyProcessor.ReadRootCAProperties(entry);
                 ret.Properties.Merge(props);
-
-                // Certificate
-                var rawCertificate = entry.GetByteProperty(LDAPProperties.CACertificate);
-                if (rawCertificate != null)
-                {
-                    ret.Certificate = new Certificate(rawCertificate);
-                    ret.CertThumbprint = ret.Certificate.Thumbprint;
-                }
             }
 
             return ret;
@@ -566,13 +573,6 @@ namespace Sharphound.Runtime
             {
                 var props = LDAPPropertyProcessor.ReadAIACAProperties(entry);
                 ret.Properties.Merge(props);
-                
-                // Cert thumbprint
-                var rawCertificate = entry.GetByteProperty(LDAPProperties.CACertificate);
-                if (rawCertificate != null)
-                {
-                    ret.CertThumbprint = _certAbuseProcessor.GetCertThumbprint(rawCertificate);
-                }
             }
 
             return ret;
@@ -585,15 +585,10 @@ namespace Sharphound.Runtime
                 ObjectIdentifier = resolvedSearchResult.ObjectId
             };
             
-            var caName = entry.GetProperty(LDAPProperties.Name);
-            var dnsHostName = entry.GetProperty(LDAPProperties.DNSHostName);
-
             ret.Properties.Add("domain", resolvedSearchResult.Domain);
             ret.Properties.Add("name", resolvedSearchResult.DisplayName);
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
-            ret.Properties.Add("caname", caName);
-            ret.Properties.Add("dnshostname", dnsHostName);
                         
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {
@@ -606,20 +601,13 @@ namespace Sharphound.Runtime
                 var props = LDAPPropertyProcessor.ReadEnterpriseCAProperties(entry);
                 ret.Properties.Merge(props);
 
-                // Certificate
-                var rawCertificate = entry.GetByteProperty(LDAPProperties.CACertificate);
-                if (rawCertificate != null)
-                {
-                    ret.Certificate = new Certificate(rawCertificate);
-                    ret.CertThumbprint = ret.Certificate.Thumbprint;
-                }
-
                 // Enabled cert templates
                 ret.EnabledCertTemplates = _certAbuseProcessor.ProcessCertTemplates(entry.GetArrayProperty(LDAPProperties.CertificateTemplates), resolvedSearchResult.Domain).ToArray();
-
             }
 
             // Collect properties from CA server registry
+            var caName = entry.GetProperty(LDAPProperties.Name);
+            var dnsHostName = entry.GetProperty(LDAPProperties.DNSHostName);
             if ((_methods & ResolvedCollectionMethod.CARegistry) != 0 && caName != null && dnsHostName != null)
             {
                 ret.HostingComputer = await _context.LDAPUtils.ResolveHostToSid(dnsHostName, resolvedSearchResult.Domain);
@@ -660,13 +648,14 @@ namespace Sharphound.Runtime
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
             {
                 var props = LDAPPropertyProcessor.ReadNTAuthStoreProperties(entry);
-                ret.Properties.Merge(props);
 
                 // Cert thumbprints
                 var rawCertificates = entry.GetByteArrayProperty(LDAPProperties.CACertificate);
                 var certificates = from rawCertificate in rawCertificates
-                                   select _certAbuseProcessor.GetCertThumbprint(rawCertificate);
-                ret.CertThumbprints = certificates.ToArray();
+                                   select new X509Certificate2(rawCertificate).Thumbprint;
+                ret.Properties.Add("certthumbprints", certificates.ToArray());
+
+                ret.Properties.Merge(props);
             }
 
             return ret;

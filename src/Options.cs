@@ -14,7 +14,7 @@ namespace Sharphound
         // Options that affect what is collected
         [Option('c', "collectionmethods", Default = new[] { "Default" },
             HelpText =
-                "Collection Methods: Group, LocalGroup, LocalAdmin, RDP, DCOM, PSRemote, Session, Trusts, ACL, Container, ComputerOnly, GPOLocalGroup, LoggedOn, ObjectProps, SPNTargets, UserRights, Default, DCOnly, CARegistry, All")]
+                "Collection Methods: Group, LocalGroup, LocalAdmin, RDP, DCOM, PSRemote, Session, Trusts, ACL, Container, ComputerOnly, GPOLocalGroup, LoggedOn, ObjectProps, SPNTargets, UserRights, Default, DCOnly, CARegistry, DCRegistry, All")]
         public IEnumerable<string> CollectionMethods { get; set; }
 
         [Option('d', "domain", Default = null, HelpText = "Specify domain to enumerate")]
@@ -188,6 +188,7 @@ namespace Sharphound
                     CollectionMethodOptions.DCOnly => ResolvedCollectionMethod.DCOnly,
                     CollectionMethodOptions.ComputerOnly => ResolvedCollectionMethod.ComputerOnly,
                     CollectionMethodOptions.CARegistry => ResolvedCollectionMethod.CARegistry,
+                    CollectionMethodOptions.DCRegistry => ResolvedCollectionMethod.DCRegistry,
                     CollectionMethodOptions.All => ResolvedCollectionMethod.All,
                     CollectionMethodOptions.None => ResolvedCollectionMethod.None,
                     _ => throw new ArgumentOutOfRangeException()
@@ -238,6 +239,12 @@ namespace Sharphound
                 {
                     resolved ^= ResolvedCollectionMethod.CARegistry;
                     updates.Add("[-] Removed CARegistry Collection");
+                }
+
+                if ((resolved & ResolvedCollectionMethod.DCRegistry) != 0)
+                {
+                    resolved ^= ResolvedCollectionMethod.DCRegistry;
+                    updates.Add("[-] Removed DCRegistry Collection");
                 }
 
                 if (localGroupRemoved)
