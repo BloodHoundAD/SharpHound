@@ -212,14 +212,15 @@ namespace Sharphound.Runtime
             }
 
             // DCRegistry
-            if (resolvedSearchResult.IsDomainController & 
+            if (resolvedSearchResult.IsDomainController &
                 (_methods & ResolvedCollectionMethod.DCRegistry) != 0)
             {
-                DCRegistryData dCRegistryData = new(){
+                DCRegistryData dCRegistryData = new()
+                {
                     CertificateMappingMethods = _dCRegistryProcessor.GetCertificateMappingMethods(apiName),
                     StrongCertificateBindingEnforcement = _dCRegistryProcessor.GetStrongCertificateBindingEnforcement(apiName)
                 };
-                
+
                 ret.DCRegistryData = dCRegistryData;
             }
 
@@ -336,7 +337,7 @@ namespace Sharphound.Runtime
         private bool IsHighValueGroup(string objectId)
         {
             // TODO: replace w/ a more definitive/centralized list
-            var suffixes = new string []
+            var suffixes = new string[]
             {
                 "-512",
                 "-516",
@@ -434,7 +435,7 @@ namespace Sharphound.Runtime
                         ret.Properties);
                 }
             }
-                
+
 
             return ret;
         }
@@ -519,7 +520,7 @@ namespace Sharphound.Runtime
                 }
                 //ret.Properties = ContextUtils.Merge(ret.Properties, LDAPPropertyProcessor.)
             }
-                
+
 
             return ret;
         }
@@ -530,12 +531,12 @@ namespace Sharphound.Runtime
             {
                 ObjectIdentifier = resolvedSearchResult.ObjectId
             };
-            
+
             ret.Properties.Add("domain", resolvedSearchResult.Domain);
             ret.Properties.Add("name", resolvedSearchResult.DisplayName);
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
-            
+
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {
                 ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
@@ -557,7 +558,7 @@ namespace Sharphound.Runtime
             {
                 ObjectIdentifier = resolvedSearchResult.ObjectId
             };
-            
+
             ret.Properties.Add("domain", resolvedSearchResult.Domain);
             ret.Properties.Add("name", resolvedSearchResult.DisplayName);
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
@@ -582,14 +583,15 @@ namespace Sharphound.Runtime
         {
             var ret = new EnterpriseCA
             {
-                ObjectIdentifier = resolvedSearchResult.ObjectId
+                ObjectIdentifier = resolvedSearchResult.ObjectId,
+                Domain = resolvedSearchResult.Domain
             };
-            
+
             ret.Properties.Add("domain", resolvedSearchResult.Domain);
             ret.Properties.Add("name", resolvedSearchResult.DisplayName);
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
-                        
+
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {
                 ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
@@ -612,7 +614,8 @@ namespace Sharphound.Runtime
             {
                 ret.HostingComputer = await _context.LDAPUtils.ResolveHostToSid(dnsHostName, resolvedSearchResult.Domain);
 
-                CARegistryData cARegistryData = new(){
+                CARegistryData cARegistryData = new()
+                {
                     IsUserSpecifiesSanEnabled = _certAbuseProcessor.IsUserSpecifiesSanEnabled(dnsHostName, caName),
                     EnrollmentAgentRestrictions = await _certAbuseProcessor.ProcessEAPermissions(caName, resolvedSearchResult.Domain, dnsHostName, ret.HostingComputer),
 
@@ -626,25 +629,26 @@ namespace Sharphound.Runtime
 
             return ret;
         }
-        
+
         private async Task<NTAuthStore> ProcessNTAuthStore(ISearchResultEntry entry, ResolvedSearchResult resolvedSearchResult)
         {
             var ret = new NTAuthStore
             {
-                ObjectIdentifier = resolvedSearchResult.ObjectId
+                ObjectIdentifier = resolvedSearchResult.ObjectId,
+                Domain = resolvedSearchResult.Domain
             };
-            
+
             ret.Properties.Add("domain", resolvedSearchResult.Domain);
             ret.Properties.Add("name", resolvedSearchResult.DisplayName);
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
-                        
+
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {
                 ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
                 ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
             }
-            
+
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
             {
                 var props = LDAPPropertyProcessor.ReadNTAuthStoreProperties(entry);
