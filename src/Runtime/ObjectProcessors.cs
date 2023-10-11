@@ -529,7 +529,8 @@ namespace Sharphound.Runtime
         {
             var ret = new RootCA
             {
-                ObjectIdentifier = resolvedSearchResult.ObjectId
+                ObjectIdentifier = resolvedSearchResult.ObjectId,
+                DomainSID = resolvedSearchResult.DomainSid
             };
 
             ret.Properties.Add("domain", resolvedSearchResult.Domain);
@@ -584,7 +585,7 @@ namespace Sharphound.Runtime
             var ret = new EnterpriseCA
             {
                 ObjectIdentifier = resolvedSearchResult.ObjectId,
-                Domain = resolvedSearchResult.Domain
+                DomainSID = resolvedSearchResult.DomainSid
             };
 
             ret.Properties.Add("domain", resolvedSearchResult.Domain);
@@ -635,7 +636,7 @@ namespace Sharphound.Runtime
             var ret = new NTAuthStore
             {
                 ObjectIdentifier = resolvedSearchResult.ObjectId,
-                Domain = resolvedSearchResult.Domain
+                DomainSID = resolvedSearchResult.DomainSid
             };
 
             ret.Properties.Add("domain", resolvedSearchResult.Domain);
