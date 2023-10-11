@@ -628,6 +628,10 @@ namespace Sharphound.Runtime
                 ret.CARegistryData = cARegistryData;
             }
 
+            ret.Properties.Add("casecuritycollected", ret.CARegistryData.CASecurity.Collected);
+            ret.Properties.Add("enrollmentagentrestrictionscollected", ret.CARegistryData.EnrollmentAgentRestrictions.Collected);
+            ret.Properties.Add("isuserspecifiessanenabledcollected", ret.CARegistryData.IsUserSpecifiesSanEnabled.Collected);
+
             return ret;
         }
 
