@@ -585,7 +585,6 @@ namespace Sharphound.Runtime
             var ret = new EnterpriseCA
             {
                 ObjectIdentifier = resolvedSearchResult.ObjectId,
-                DomainSID = resolvedSearchResult.DomainSid
             };
 
             ret.Properties.Add("domain", resolvedSearchResult.Domain);
