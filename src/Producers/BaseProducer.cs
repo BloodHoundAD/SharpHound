@@ -147,7 +147,7 @@ namespace Sharphound.Producers
 
             if ((methods & ResolvedCollectionMethod.ObjectProps) != 0 || (methods & ResolvedCollectionMethod.ACL) != 0)
             {
-                query = query.AddContainers().AddCertificateTemplates().AddCertificateAuthorities().AddEnterpriseCertificationAuthorities();
+                query = query.AddContainers().AddConfiguration().AddCertificateTemplates().AddCertificateAuthorities().AddEnterpriseCertificationAuthorities();
                 props.AddRange(CommonProperties.ObjectPropsProps);
                 props.AddRange(CommonProperties.CertAbuseProps);
 
@@ -161,7 +161,7 @@ namespace Sharphound.Producers
             {
                 if ((methods & ResolvedCollectionMethod.Container) != 0)
                 {
-                    query = query.AddContainers().AddCertificateTemplates().AddCertificateAuthorities().AddEnterpriseCertificationAuthorities();
+                    query = query.AddContainers().AddConfiguration().AddCertificateTemplates().AddCertificateAuthorities().AddEnterpriseCertificationAuthorities();
                     props.AddRange(CommonProperties.ContainerProps);
                 }
 
