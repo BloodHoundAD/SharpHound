@@ -103,7 +103,7 @@ namespace Sharphound
                 context.Flags.IsFaulted = true;
                 return context;
             }
-
+            
             //Check some loop options
             if (!context.Flags.Loop) return context;
             //If loop is set, ensure we actually set options properly
@@ -370,7 +370,8 @@ namespace Sharphound
                         CollectAllProperties = options.CollectAllProperties,
                         DCOnly = dconly,
                         PrettyPrint = options.PrettyPrint,
-                        SearchForest = options.SearchForest
+                        SearchForest = options.SearchForest,
+                        DoLocalAdminSessionEnum = options.DoLocalAdminSessionEnum,
                     };
 
                     var ldapOptions = new LDAPConfig
@@ -395,7 +396,38 @@ namespace Sharphound
                         ldapOptions.Username = options.LDAPUsername;
                         ldapOptions.Password = options.LDAPPassword;
                     }
+                    
+                    // Check to make sure both Local Admin Session Enum options are set if either is set
 
+                    if (options.LocalAdminPassword != null && options.LocalAdminUsername == null ||
+                        options.LocalAdminUsername != null && options.LocalAdminPassword == null)
+                    {
+                        logger.LogError("You must specify both LocalAdminUsername and LocalAdminPassword if using these options!");
+                        return;
+                    }
+
+                    // Check to make sure doLocalAdminSessionEnum is set when specifying localadmin and password
+
+                    if (options.LocalAdminPassword != null || options.LocalAdminUsername != null)
+                    {
+                        if (options.DoLocalAdminSessionEnum == false)
+                        {
+                            logger.LogError("You must use the --doLocalAdminSessionEnum switch in combination with --LocalAdminUsername and --LocalAdminPassword!");
+                            return;
+                        }
+                    }
+
+                    // Check to make sure LocalAdminUsername and LocalAdminPassword are set when using doLocalAdminSessionEnum
+
+                    if (options.DoLocalAdminSessionEnum == true)
+                    {
+                        if (options.LocalAdminPassword == null || options.LocalAdminUsername == null)
+                        {
+                            logger.LogError("You must specify both LocalAdminUsername and LocalAdminPassword if using the --doLocalAdminSessionEnum option!");
+                            return;
+                        }
+                    }
+                    
                     IContext context = new BaseContext(logger, ldapOptions, flags)
                     {
                         DomainName = options.Domain,
@@ -416,7 +448,10 @@ namespace Sharphound
                         LoopDuration = options.LoopDuration,
                         LoopInterval = options.LoopInterval,
                         ZipPassword = options.ZipPassword,
-                        IsFaulted = false
+                        IsFaulted = false,
+                        LocalAdminUsername = options.LocalAdminUsername,
+                        LocalAdminPassword = options.LocalAdminPassword
+
                     };
 
                     var cancellationTokenSource = new CancellationTokenSource();

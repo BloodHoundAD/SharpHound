@@ -1,4 +1,6 @@
-﻿namespace Sharphound.Client
+﻿using SharpHoundCommonLib.OutputTypes;
+
+namespace Sharphound.Client
 {
     public class Flags
     {
@@ -23,5 +25,6 @@
         public bool DCOnly { get; set; }
         public bool PrettyPrint { get; set; }
         public bool SearchForest { get; set; }
+        public bool DoLocalAdminSessionEnum { get; set; }
     }
 }
