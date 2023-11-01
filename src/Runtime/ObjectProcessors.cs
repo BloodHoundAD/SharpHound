@@ -11,6 +11,9 @@ using SharpHoundCommonLib;
 using SharpHoundCommonLib.Enums;
 using SharpHoundCommonLib.OutputTypes;
 using SharpHoundCommonLib.Processors;
+using Container = SharpHoundCommonLib.OutputTypes.Container;
+using Group = SharpHoundCommonLib.OutputTypes.Group;
+using Label = SharpHoundCommonLib.Enums.Label;
 
 namespace Sharphound.Runtime
 {

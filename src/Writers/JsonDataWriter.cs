@@ -1,8 +1,10 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Sharphound.Client;
 using SharpHoundCommonLib.OutputTypes;
@@ -18,6 +20,7 @@ namespace Sharphound.Writers
         private JsonTextWriter _jsonWriter;
         private readonly IContext _context;
         private string _fileName;
+        private JsonSerializerSettings _serializerSettings;
 
         private const int DataVersion = 5;
 
@@ -31,6 +34,15 @@ namespace Sharphound.Writers
             _context = context;
             if (_context.Flags.NoOutput)
                 NoOp = true;
+
+            _serializerSettings = new JsonSerializerSettings()
+            {
+                Converters = new List<JsonConverter>
+                {
+                    new StringEnumConverter()
+                },
+                Formatting = PrettyPrint
+            };
         }
 
         private Formatting PrettyPrint => _context.Flags.PrettyPrint ? Formatting.Indented : Formatting.None;
@@ -61,7 +73,7 @@ namespace Sharphound.Writers
         {
             foreach (var item in Queue)
             {
-                await _jsonWriter.WriteRawValueAsync(JsonConvert.SerializeObject(item, PrettyPrint));
+                await _jsonWriter.WriteRawValueAsync(JsonConvert.SerializeObject(item, _serializerSettings));
             }
         }
 
