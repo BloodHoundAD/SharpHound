@@ -425,11 +425,6 @@ namespace Sharphound.Runtime
                 }
             }
 
-            if ((_methods & ResolvedCollectionMethod.Container) != 0)
-            {
-                ret.ContainedBy = _containerProcessor.GetContainingObject(entry.DistinguishedName);
-            }
-
             return ret;
         }
 
@@ -465,6 +460,7 @@ namespace Sharphound.Runtime
 
             if ((_methods & ResolvedCollectionMethod.Container) != 0)
             {
+                ret.ContainedBy = _containerProcessor.GetContainingObject(entry.DistinguishedName);
                 ret.Properties.Add("blocksinheritance",
                     ContainerProcessor.ReadBlocksInheritance(entry.GetProperty("gpoptions")));
                 ret.Links = _containerProcessor.ReadContainerGPLinks(resolvedSearchResult, entry).ToArray();
