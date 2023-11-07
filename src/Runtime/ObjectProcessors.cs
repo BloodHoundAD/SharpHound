@@ -611,6 +611,9 @@ namespace Sharphound.Runtime
             }
 
             // Collect properties from CA server registry
+            bool cASecurityCollected = false;
+            bool enrollmentAgentRestrictionsCollected = false;
+            bool isUserSpecifiesSanEnabledCollected = false;
             var caName = entry.GetProperty(LDAPProperties.Name);
             var dnsHostName = entry.GetProperty(LDAPProperties.DNSHostName);
             if ((_methods & ResolvedCollectionMethod.CARegistry) != 0 && caName != null && dnsHostName != null)
@@ -627,12 +630,15 @@ namespace Sharphound.Runtime
                     CASecurity = await _certAbuseProcessor.ProcessRegistryEnrollmentPermissions(caName, resolvedSearchResult.Domain, dnsHostName, ret.HostingComputer)
                 };
 
+                cASecurityCollected = cARegistryData.CASecurity.Collected;
+                enrollmentAgentRestrictionsCollected = cARegistryData.EnrollmentAgentRestrictions.Collected;
+                isUserSpecifiesSanEnabledCollected = cARegistryData.IsUserSpecifiesSanEnabled.Collected;
                 ret.CARegistryData = cARegistryData;
             }
 
-            ret.Properties.Add("casecuritycollected", ret.CARegistryData.CASecurity.Collected);
-            ret.Properties.Add("enrollmentagentrestrictionscollected", ret.CARegistryData.EnrollmentAgentRestrictions.Collected);
-            ret.Properties.Add("isuserspecifiessanenabledcollected", ret.CARegistryData.IsUserSpecifiesSanEnabled.Collected);
+            ret.Properties.Add("casecuritycollected", cASecurityCollected);
+            ret.Properties.Add("enrollmentagentrestrictionscollected", enrollmentAgentRestrictionsCollected);
+            ret.Properties.Add("isuserspecifiessanenabledcollected", isUserSpecifiesSanEnabledCollected);
 
             return ret;
         }
