@@ -566,6 +566,11 @@ namespace Sharphound.Runtime
                 ret.Properties.Merge(props);
             }
 
+            if ((_methods & ResolvedCollectionMethod.Container) != 0)
+            {
+                ret.ContainedBy = _containerProcessor.GetContainingObject(entry.DistinguishedName);
+            }
+
             return ret;
         }
 
@@ -591,6 +596,11 @@ namespace Sharphound.Runtime
             {
                 var props = LDAPPropertyProcessor.ReadAIACAProperties(entry);
                 ret.Properties.Merge(props);
+            }
+
+            if ((_methods & ResolvedCollectionMethod.Container) != 0)
+            {
+                ret.ContainedBy = _containerProcessor.GetContainingObject(entry.DistinguishedName);
             }
 
             return ret;
@@ -621,6 +631,11 @@ namespace Sharphound.Runtime
 
                 // Enabled cert templates
                 ret.EnabledCertTemplates = _certAbuseProcessor.ProcessCertTemplates(entry.GetArrayProperty(LDAPProperties.CertificateTemplates), resolvedSearchResult.Domain).ToArray();
+            }
+
+            if ((_methods & ResolvedCollectionMethod.Container) != 0)
+            {
+                ret.ContainedBy = _containerProcessor.GetContainingObject(entry.DistinguishedName);
             }
 
             // Collect properties from CA server registry
@@ -688,6 +703,11 @@ namespace Sharphound.Runtime
                 ret.Properties.Merge(props);
             }
 
+            if ((_methods & ResolvedCollectionMethod.Container) != 0)
+            {
+                ret.ContainedBy = _containerProcessor.GetContainingObject(entry.DistinguishedName);
+            }
+
             return ret;
         }
 
@@ -714,6 +734,12 @@ namespace Sharphound.Runtime
                 var certTemplatesProps = LDAPPropertyProcessor.ReadCertTemplateProperties(entry);
                 ret.Properties.Merge(certTemplatesProps);
             }
+
+            if ((_methods & ResolvedCollectionMethod.Container) != 0)
+            {
+                ret.ContainedBy = _containerProcessor.GetContainingObject(entry.DistinguishedName);
+            }
+
             return ret;
         }
     }

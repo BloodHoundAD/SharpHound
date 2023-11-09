@@ -161,7 +161,7 @@ namespace Sharphound.Producers
             {
                 if ((methods & ResolvedCollectionMethod.Container) != 0)
                 {
-                    query = query.AddContainers();
+                    query = query.AddContainers().AddCertificateTemplates().AddCertificateAuthorities().AddEnterpriseCertificationAuthorities();
                     props.AddRange(CommonProperties.ContainerProps);
                 }
 
