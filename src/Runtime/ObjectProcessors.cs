@@ -150,6 +150,11 @@ namespace Sharphound.Runtime
                 ret.SPNTargets = targets.ToArray();
             }
 
+            if ((_methods & ResolvedCollectionMethod.Container) != 0)
+            {
+                ret.ContainedBy = _containerProcessor.GetContainingObject(entry.DistinguishedName);
+            }
+
             return ret;
         }
 
@@ -196,6 +201,11 @@ namespace Sharphound.Runtime
                 ret.AllowedToAct = computerProps.AllowedToAct;
                 ret.HasSIDHistory = computerProps.SidHistory;
                 ret.DumpSMSAPassword = computerProps.DumpSMSAPassword;
+            }
+
+            if ((_methods & ResolvedCollectionMethod.Container) != 0)
+            {
+                ret.ContainedBy = _containerProcessor.GetContainingObject(entry.DistinguishedName);
             }
 
             if (!_methods.IsComputerCollectionSet())
@@ -334,6 +344,11 @@ namespace Sharphound.Runtime
                 }
             }
 
+            if ((_methods & ResolvedCollectionMethod.Container) != 0)
+            {
+                ret.ContainedBy = _containerProcessor.GetContainingObject(entry.DistinguishedName);
+            }
+
             return ret;
         }
 
@@ -396,7 +411,6 @@ namespace Sharphound.Runtime
 
             if ((_methods & ResolvedCollectionMethod.Container) != 0)
             {
-                ret.ChildObjects = _containerProcessor.GetContainerChildObjects(resolvedSearchResult, entry).ToArray();
                 ret.Links = _containerProcessor.ReadContainerGPLinks(resolvedSearchResult, entry).ToArray();
             }
 
@@ -439,7 +453,6 @@ namespace Sharphound.Runtime
                 }
             }
 
-
             return ret;
         }
 
@@ -475,7 +488,7 @@ namespace Sharphound.Runtime
 
             if ((_methods & ResolvedCollectionMethod.Container) != 0)
             {
-                ret.ChildObjects = _containerProcessor.GetContainerChildObjects(resolvedSearchResult, entry).ToArray();
+                ret.ContainedBy = _containerProcessor.GetContainingObject(entry.DistinguishedName);
                 ret.Properties.Add("blocksinheritance",
                     ContainerProcessor.ReadBlocksInheritance(entry.GetProperty("gpoptions")));
                 ret.Links = _containerProcessor.ReadContainerGPLinks(resolvedSearchResult, entry).ToArray();
@@ -505,7 +518,7 @@ namespace Sharphound.Runtime
             ret.Properties.Add("highvalue", false);
 
             if ((_methods & ResolvedCollectionMethod.Container) != 0)
-                ret.ChildObjects = _containerProcessor.GetContainerChildObjects(entry.DistinguishedName).ToArray();
+                ret.ContainedBy = _containerProcessor.GetContainingObject(entry.DistinguishedName);
 
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {

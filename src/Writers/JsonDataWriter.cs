@@ -22,7 +22,7 @@ namespace Sharphound.Writers
         private string _fileName;
         private JsonSerializerSettings _serializerSettings;
 
-        private const int DataVersion = 5;
+        private const int DataVersion = 6;
 
         /// <summary>
         ///     Creates a new instance of a JSONWriter using the specified datatype and program context

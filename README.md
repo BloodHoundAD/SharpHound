@@ -1,7 +1,3 @@
----
-SharpHound Open Source Client version: 2.0.0
----
-
 # SharpHound
 
 ![GitHub all releases](https://img.shields.io/github/downloads/BloodHoundAD/SharpHound/total)
