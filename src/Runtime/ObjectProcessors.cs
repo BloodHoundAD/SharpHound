@@ -77,6 +77,7 @@ namespace Sharphound.Runtime
                 case Label.OU:
                     return await ProcessOUObject(entry, resolvedSearchResult);
                 case Label.Container:
+                case Label.Configuration:
                     return ProcessContainerObject(entry, resolvedSearchResult);
                 case Label.RootCA:
                     return await ProcessRootCA(entry, resolvedSearchResult);
