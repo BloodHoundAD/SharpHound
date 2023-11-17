@@ -26,7 +26,7 @@ namespace Sharphound.Producers
         {
             var cancellationToken = Context.CancellationTokenSource.Token;
 
-            var ldapData = CreateLDAPData();
+            var ldapData = CreateDefaultNCData();
 
             var log = Context.Logger;
             var utils = Context.LDAPUtils;
@@ -67,7 +67,7 @@ namespace Sharphound.Producers
                         { "collected", true },
                     }
                 });
-                
+
                 foreach (var searchResult in Context.LDAPUtils.QueryLDAP(ldapData.Filter.GetFilter(), SearchScope.Subtree,
                              ldapData.Props.Distinct().ToArray(), cancellationToken, domain.Name,
                              adsPath: Context.SearchBase,
@@ -83,7 +83,7 @@ namespace Sharphound.Producers
                     Context.Logger.LogTrace("Producer wrote {DistinguishedName} to channel", searchResult.DistinguishedName);
                 }
             }
-            
+
         }
 
         /// <summary>
@@ -121,7 +121,7 @@ namespace Sharphound.Producers
                     Context.Logger.LogTrace("Skipping already collected config NC '{path}' for domain {Domain}", configAdsPath, domain.Name);
                 }
             }
-            
+
         }
 
     }

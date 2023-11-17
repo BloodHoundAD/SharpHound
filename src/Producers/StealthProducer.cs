@@ -25,7 +25,7 @@ namespace Sharphound.Producers
 
         public StealthProducer(IContext context, Channel<ISearchResultEntry> channel, Channel<OutputBase> outputChannel) : base(context, channel, outputChannel)
         {
-            var ldapData = CreateLDAPData();
+            var ldapData = CreateDefaultNCData();
             _query = ldapData.Filter;
             _props = ldapData.Props;
 
@@ -124,7 +124,7 @@ namespace Sharphound.Producers
                     }
                 });
             }
-            
+
 
 
             // Loop over the paths we grabbed, and resolve them to sids.

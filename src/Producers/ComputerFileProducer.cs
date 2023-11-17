@@ -30,7 +30,7 @@ namespace Sharphound.Producers
             var computerFile = Context.ComputerFile;
             var cancellationToken = Context.CancellationTokenSource.Token;
 
-            var ldapData = CreateLDAPData();
+            var ldapData = CreateDefaultNCData();
 
             try
             {
