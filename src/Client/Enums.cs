@@ -26,6 +26,7 @@
         ComputerOnly,
         CARegistry,
         DCRegistry,
+        CertServices,
         All
     }
 }

@@ -14,7 +14,7 @@ namespace Sharphound
         // Options that affect what is collected
         [Option('c', "collectionmethods", Default = new[] { "Default" },
             HelpText =
-                "Collection Methods: Group, LocalGroup, LocalAdmin, RDP, DCOM, PSRemote, Session, Trusts, ACL, Container, ComputerOnly, GPOLocalGroup, LoggedOn, ObjectProps, SPNTargets, UserRights, Default, DCOnly, CARegistry, DCRegistry, All")]
+                "Collection Methods: Group, LocalGroup, LocalAdmin, RDP, DCOM, PSRemote, Session, Trusts, ACL, Container, ComputerOnly, GPOLocalGroup, LoggedOn, ObjectProps, SPNTargets, UserRights, Default, DCOnly, CARegistry, DCRegistry, CertServices, All")]
         public IEnumerable<string> CollectionMethods { get; set; }
 
         [Option('d', "domain", Default = null, HelpText = "Specify domain to enumerate")]
@@ -61,7 +61,7 @@ namespace Sharphound
 
         [Option(HelpText = "Don't zip files", Default = false)]
         public bool NoZip { get; set; }
-        
+
         [Option(HelpText = "Password protects the zip with the specified password", Default = null)]
         public string ZipPassword { get; set; }
 
@@ -87,7 +87,7 @@ namespace Sharphound
 
         [Option(HelpText = "Connect to LDAP SSL instead of regular LDAP", Default = false)]
         public bool SecureLDAP { get; set; }
-        
+
         [Option(HelpText = "Disables certificate verification when using LDAPS", Default = false)]
         public bool DisableCertVerification { get; set; }
 
@@ -97,10 +97,10 @@ namespace Sharphound
         //Options that affect how enumeration is performed
         [Option(HelpText = "Skip checking if 445 is open", Default = false)]
         public bool SkipPortCheck { get; set; }
-        
+
         [Option(HelpText = "Timeout for port checks in milliseconds", Default = 500)]
         public int PortCheckTimeout { get; set; }
-        
+
         [Option(HelpText = "Skip check for PwdLastSet when enumerating computers", Default = false)]
         public bool SkipPasswordCheck { get; set; }
 
@@ -114,7 +114,7 @@ namespace Sharphound
         [Option(HelpText = "Add jitter to throttle (percent)")]
         public int Jitter { get; set; }
 
-        [Option('t',"threads", HelpText = "Number of threads to run enumeration with", Default = 50)]
+        [Option('t', "threads", HelpText = "Number of threads to run enumeration with", Default = 50)]
         public int Threads { get; set; }
 
         [Option(HelpText = "Skip registry session enumeration")]
@@ -133,10 +133,10 @@ namespace Sharphound
         [Option('l', "Loop", HelpText = "Loop computer collection")]
         public bool Loop { get; set; }
 
-        [Option(HelpText="Loop duration (hh:mm:ss - 05:00:00 is 5 hours, default: 2 hrs)")]
+        [Option(HelpText = "Loop duration (hh:mm:ss - 05:00:00 is 5 hours, default: 2 hrs)")]
         public TimeSpan LoopDuration { get; set; }
 
-        [Option(HelpText="Add delay between loops (hh:mm:ss - 00:03:00 is 3 minutes)")] public TimeSpan LoopInterval { get; set; }
+        [Option(HelpText = "Add delay between loops (hh:mm:ss - 00:03:00 is 3 minutes)")] public TimeSpan LoopInterval { get; set; }
 
         //Misc Options
         [Option(HelpText = "Interval in which to display status in milliseconds", Default = 30000)]
@@ -189,6 +189,7 @@ namespace Sharphound
                     CollectionMethodOptions.ComputerOnly => ResolvedCollectionMethod.ComputerOnly,
                     CollectionMethodOptions.CARegistry => ResolvedCollectionMethod.CARegistry,
                     CollectionMethodOptions.DCRegistry => ResolvedCollectionMethod.DCRegistry,
+                    CollectionMethodOptions.CertServices => ResolvedCollectionMethod.CertServices,
                     CollectionMethodOptions.All => ResolvedCollectionMethod.All,
                     CollectionMethodOptions.None => ResolvedCollectionMethod.None,
                     _ => throw new ArgumentOutOfRangeException()
@@ -234,7 +235,7 @@ namespace Sharphound
                     resolved ^= ResolvedCollectionMethod.LocalAdmin;
                     updates.Add("[-] Removed LocalAdmin Collection");
                 }
-                
+
                 if ((resolved & ResolvedCollectionMethod.CARegistry) != 0)
                 {
                     resolved ^= ResolvedCollectionMethod.CARegistry;
