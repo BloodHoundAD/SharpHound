@@ -48,7 +48,7 @@ namespace Sharphound.Runtime
             _computerAvailability = new ComputerAvailability(context.PortScanTimeout, skipPortScan: context.Flags.SkipPortScan, skipPasswordCheck: context.Flags.SkipPasswordAgeCheck);
             _certAbuseProcessor = new CertAbuseProcessor(context.LDAPUtils);
             _dCRegistryProcessor = new DCRegistryProcessor(context.LDAPUtils);
-            _computerSessionProcessor = new ComputerSessionProcessor(context.LDAPUtils);
+            _computerSessionProcessor = new ComputerSessionProcessor(context.LDAPUtils, doLocalAdminSessionEnum: context.Flags.DoLocalAdminSessionEnum, localAdminUsername: context.LocalAdminUsername, localAdminPassword: context.LocalAdminPassword);
             _groupProcessor = new GroupProcessor(context.LDAPUtils);
             _containerProcessor = new ContainerProcessor(context.LDAPUtils);
             _gpoLocalGroupProcessor = new GPOLocalGroupProcessor(context.LDAPUtils);
