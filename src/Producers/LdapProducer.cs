@@ -94,9 +94,12 @@ namespace Sharphound.Producers
         {
             var cancellationToken = Context.CancellationTokenSource.Token;
             var configNcData = CreateConfigNCData();
-            List<string> configurationNCsCollected = new List<string>();
+            var configurationNCsCollected = new List<string>();
 
-            foreach (EnumerationDomain domain in Context.Domains)
+            if (string.IsNullOrEmpty(configNcData.Filter.GetFilter()))
+                return;
+
+            foreach (var domain in Context.Domains)
             {
                 var configAdsPath = Context.LDAPUtils.GetConfigurationPath(domain.Name);
                 if (!configurationNCsCollected.Contains(configAdsPath))
@@ -121,8 +124,6 @@ namespace Sharphound.Producers
                     Context.Logger.LogTrace("Skipping already collected config NC '{path}' for domain {Domain}", configAdsPath, domain.Name);
                 }
             }
-
         }
-
     }
 }
