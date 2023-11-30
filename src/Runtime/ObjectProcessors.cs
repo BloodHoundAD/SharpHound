@@ -117,6 +117,7 @@ namespace Sharphound.Runtime
                 var gmsa = entry.GetByteProperty(LDAPProperties.GroupMSAMembership);
                 ret.Aces = aces.Concat(_aclProcessor.ProcessGMSAReaders(gmsa, resolvedSearchResult.Domain)).ToArray();
                 ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
+                ret.Properties.Add("isaclprotected", ret.IsACLProtected);
             }
 
             if ((_methods & ResolvedCollectionMethod.Group) != 0)
@@ -181,6 +182,7 @@ namespace Sharphound.Runtime
             {
                 ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
                 ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
+                ret.Properties.Add("isaclprotected", ret.IsACLProtected);
             }
 
             if ((_methods & ResolvedCollectionMethod.Group) != 0)
@@ -327,6 +329,7 @@ namespace Sharphound.Runtime
             {
                 ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
                 ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
+                ret.Properties.Add("isaclprotected", ret.IsACLProtected);
             }
 
             if ((_methods & ResolvedCollectionMethod.Group) != 0)
@@ -395,6 +398,7 @@ namespace Sharphound.Runtime
             {
                 ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
                 ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
+                ret.Properties.Add("isaclprotected", ret.IsACLProtected);
             }
 
             if ((_methods & ResolvedCollectionMethod.Trusts) != 0)
@@ -442,6 +446,7 @@ namespace Sharphound.Runtime
             {
                 ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
                 ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
+                ret.Properties.Add("isaclprotected", ret.IsACLProtected);
             }
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
@@ -475,6 +480,7 @@ namespace Sharphound.Runtime
             {
                 ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
                 ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
+                ret.Properties.Add("isaclprotected", ret.IsACLProtected);
             }
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
@@ -526,6 +532,7 @@ namespace Sharphound.Runtime
                 ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry)
                     .ToArray();
                 ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
+                ret.Properties.Add("isaclprotected", ret.IsACLProtected);
             }
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
@@ -559,6 +566,7 @@ namespace Sharphound.Runtime
             {
                 ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
                 ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
+                ret.Properties.Add("isaclprotected", ret.IsACLProtected);
             }
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
@@ -591,6 +599,7 @@ namespace Sharphound.Runtime
             {
                 ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
                 ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
+                ret.Properties.Add("isaclprotected", ret.IsACLProtected);
             }
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
@@ -623,6 +632,7 @@ namespace Sharphound.Runtime
             {
                 ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
                 ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
+                ret.Properties.Add("isaclprotected", ret.IsACLProtected);
             }
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
@@ -689,6 +699,7 @@ namespace Sharphound.Runtime
             {
                 ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
                 ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
+                ret.Properties.Add("isaclprotected", ret.IsACLProtected);
             }
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
@@ -728,6 +739,7 @@ namespace Sharphound.Runtime
             {
                 ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
                 ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
+                ret.Properties.Add("isaclprotected", ret.IsACLProtected);
             }
 
             if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
