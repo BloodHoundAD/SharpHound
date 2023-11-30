@@ -59,7 +59,7 @@ namespace Sharphound.Writers
 
             _fileName = filename;
 
-            _jsonWriter = new JsonTextWriter(new StreamWriter(filename, false, Encoding.UTF8));
+            _jsonWriter = new JsonTextWriter(new StreamWriter(filename, false, new UTF8Encoding(false)));
             _jsonWriter.Formatting = PrettyPrint;
             _jsonWriter.WriteStartObject();
             _jsonWriter.WritePropertyName("data");
