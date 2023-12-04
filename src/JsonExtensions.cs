@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
-using SharpHoundCommonLib;
 using SharpHoundCommonLib.Enums;
 
 namespace Sharphound
@@ -14,7 +13,8 @@ namespace Sharphound
         private static readonly CacheContractResolver Instance = new();
         public static readonly JsonSerializerSettings Settings = new()
         {
-            ContractResolver = Instance
+            ContractResolver = Instance,
+            Converters = new List<JsonConverter> {new VersionConverter()}
         };
         
         protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
