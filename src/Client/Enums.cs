@@ -24,6 +24,9 @@
         Default,
         DCOnly,
         ComputerOnly,
+        CARegistry,
+        DCRegistry,
+        CertServices,
         All
     }
 }

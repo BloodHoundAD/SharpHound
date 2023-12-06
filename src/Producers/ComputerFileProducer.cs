@@ -30,7 +30,7 @@ namespace Sharphound.Producers
             var computerFile = Context.ComputerFile;
             var cancellationToken = Context.CancellationTokenSource.Token;
 
-            var ldapData = CreateLDAPData();
+            var ldapData = CreateDefaultNCData();
 
             try
             {
@@ -78,6 +78,11 @@ namespace Sharphound.Producers
             {
                 Console.WriteLine($"Error opening ComputerFile: {e}");
             }
+        }
+
+        public override async Task ProduceConfigNC()
+        {
+            // Does not make sense for Computer file
         }
     }
 }

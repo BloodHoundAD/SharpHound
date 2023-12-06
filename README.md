@@ -19,7 +19,6 @@ dotnet build
 
 SharpHound is designed targeting .Net 4.6.2. SharpHound must be run from the context of a domain user, either directly through a logon or through another method such as RUNAS.
 
-
 # SharpHound
 
 ```csharp
@@ -28,9 +27,10 @@ dotnet build
 ```
 
 # CLI
+
 ```
   -c, --collectionmethods    (Default: Default) Collection Methods: Container, Group, LocalGroup, GPOLocalGroup,
-                             Session, LoggedOn, ObjectProps, ACL, ComputerOnly, Trusts, Default, RDP, DCOM, DCOnly
+                             Session, LoggedOn, ObjectProps, ACL, ComputerOnly, Trusts, Default, RDP, DCOM, DCOnly, CARegistry, DCRegistry, CertServices
 
   -d, --domain               Specify domain to enumerate
 
@@ -75,7 +75,7 @@ dotnet build
   --ldapport                 (Default: 0) Override port for LDAP
 
   --secureldap               (Default: false) Connect to LDAP SSL instead of regular LDAP
-  
+
   --disablecertverification  (Default: false) Disable certificate verification for secure LDAP
 
   --disablesigning           (Default: false) Disables Kerberos Signing/Sealing
@@ -83,7 +83,7 @@ dotnet build
   --skipportcheck            (Default: false) Skip checking if 445 is open
 
   --portchecktimeout         (Default: 500) Timeout for port checks in milliseconds
-  
+
   --skippasswordcheck        (Default: false) Skip PwdLastSet age check when checking computers
 
   --excludedcs               (Default: false) Exclude domain controllers from session/localgroup enumeration (mostly for

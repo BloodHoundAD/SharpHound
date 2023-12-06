@@ -1,10 +1,17 @@
 using System.Collections.Generic;
+
 using System.Threading.Channels;
+
 using System.Threading.Tasks;
+
 using Sharphound.Client;
+
 using SharpHoundCommonLib;
+
 using SharpHoundCommonLib.Enums;
+
 using SharpHoundCommonLib.LDAPQueries;
+
 using SharpHoundCommonLib.OutputTypes;
 
 namespace Sharphound.Producers
@@ -26,8 +33,9 @@ namespace Sharphound.Producers
         }
 
         public abstract Task Produce();
+        public abstract Task ProduceConfigNC();
 
-        protected LDAPData CreateLDAPData()
+        protected LDAPData CreateDefaultNCData()
         {
             var query = new LDAPFilter();
             var props = new List<string>();
@@ -59,9 +67,9 @@ namespace Sharphound.Producers
                     (methods & ResolvedCollectionMethod.RDP) != 0 ||
                     (methods & ResolvedCollectionMethod.LoggedOn) != 0 ||
                     (methods & ResolvedCollectionMethod.Session) != 0 ||
-                    (methods & ResolvedCollectionMethod.ObjectProps) != 0 || 
+                    (methods & ResolvedCollectionMethod.ObjectProps) != 0 ||
                     (methods & ResolvedCollectionMethod.UserRights) != 0)
-                    
+
                     props.AddRange(CommonProperties.ComputerMethodProps);
 
                 if ((methods & ResolvedCollectionMethod.Trusts) != 0) props.AddRange(CommonProperties.DomainTrustProps);
@@ -71,6 +79,9 @@ namespace Sharphound.Producers
 
                 if ((methods & ResolvedCollectionMethod.SPNTargets) != 0)
                     props.AddRange(CommonProperties.SPNTargetProps);
+
+                if ((methods & ResolvedCollectionMethod.DCRegistry) != 0)
+                    props.AddRange(CommonProperties.ComputerMethodProps);
             }
             else
             {
@@ -92,7 +103,7 @@ namespace Sharphound.Producers
                     (methods & ResolvedCollectionMethod.RDP) != 0 ||
                     (methods & ResolvedCollectionMethod.LoggedOn) != 0 ||
                     (methods & ResolvedCollectionMethod.Session) != 0 ||
-                    (methods & ResolvedCollectionMethod.ObjectProps) != 0 || 
+                    (methods & ResolvedCollectionMethod.ObjectProps) != 0 ||
                     (methods & ResolvedCollectionMethod.UserRights) != 0)
                 {
                     query = query.AddComputers();
@@ -116,7 +127,62 @@ namespace Sharphound.Producers
                     query = query.AddOUs();
                     props.AddRange(CommonProperties.GPOLocalGroupProps);
                 }
+
+                if ((methods & ResolvedCollectionMethod.DCRegistry) != 0)
+                {
+                    query = query.AddComputers();
+                    props.AddRange(CommonProperties.ComputerMethodProps);
+                }
             }
+
+            if (Context.LdapFilter != null) query.AddFilter(Context.LdapFilter, true);
+
+            data.Filter = query;
+            data.Props = props;
+            return data;
+        }
+
+        protected LDAPData CreateConfigNCData()
+        {
+            var query = new LDAPFilter();
+            var props = new List<string>();
+            var data = new LDAPData();
+            props.AddRange(CommonProperties.BaseQueryProps);
+            props.AddRange(CommonProperties.TypeResolutionProps);
+
+            var methods = Context.ResolvedCollectionMethods;
+            var allObjectTypesQuery = new LDAPFilter().AddContainers().AddConfiguration().AddCertificateTemplates().AddCertificateAuthorities().AddEnterpriseCertificationAuthorities();
+
+            if ((methods & ResolvedCollectionMethod.ObjectProps) != 0)
+            {
+                query = allObjectTypesQuery;
+                props.AddRange(CommonProperties.ObjectPropsProps);
+            }
+
+            if ((methods & ResolvedCollectionMethod.ACL) != 0)
+            {
+                query = allObjectTypesQuery;
+                props.AddRange(CommonProperties.ACLProps);
+            }
+
+            if ((methods & ResolvedCollectionMethod.CertServices) != 0)
+            {
+                query = allObjectTypesQuery;
+                props.AddRange(CommonProperties.CertAbuseProps);
+            }
+
+            if ((methods & ResolvedCollectionMethod.Container) != 0)
+            {
+                query = allObjectTypesQuery;
+                props.AddRange(CommonProperties.ContainerProps);
+            }
+
+            if ((methods & ResolvedCollectionMethod.CARegistry) != 0)
+            {
+                query = query.AddEnterpriseCertificationAuthorities();
+                props.AddRange(CommonProperties.CertAbuseProps);
+            }
+
 
             if (Context.LdapFilter != null) query.AddFilter(Context.LdapFilter, true);
 
