@@ -341,7 +341,7 @@ namespace Sharphound
             // 15. Program exit started. Save the cache file
             var cache = Cache.GetCacheInstance();
             context.Logger.LogInformation("Saving cache with stats: {stats}", cache.GetCacheStats());
-            var serialized = JsonConvert.SerializeObject(cache);
+            var serialized = JsonConvert.SerializeObject(cache, CacheContractResolver.Settings);
             using var stream =
                 new StreamWriter(context.GetCachePath());
             stream.Write(serialized);
