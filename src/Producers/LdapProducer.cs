@@ -31,6 +31,11 @@ namespace Sharphound.Producers
             var log = Context.Logger;
             var utils = Context.LDAPUtils;
 
+            if (string.IsNullOrEmpty(ldapData.Filter.GetFilter()))
+            {
+                return;
+            }
+
             if (Context.Flags.CollectAllProperties)
             {
                 log.LogDebug("CollectAllProperties set. Changing LDAP properties to *");
@@ -83,7 +88,6 @@ namespace Sharphound.Producers
                     Context.Logger.LogTrace("Producer wrote {DistinguishedName} to channel", searchResult.DistinguishedName);
                 }
             }
-
         }
 
         /// <summary>
