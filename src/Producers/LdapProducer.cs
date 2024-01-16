@@ -76,7 +76,7 @@ namespace Sharphound.Producers
                 foreach (var searchResult in Context.LDAPUtils.QueryLDAP(ldapData.Filter.GetFilter(), SearchScope.Subtree,
                              ldapData.Props.Distinct().ToArray(), cancellationToken, domain.Name,
                              adsPath: Context.SearchBase,
-                             includeAcl: (Context.ResolvedCollectionMethods & ResolvedCollectionMethod.ACL) != 0 || (Context.ResolvedCollectionMethods & ResolvedCollectionMethod.CertServices) != 0))
+                             includeAcl: (Context.ResolvedCollectionMethods & ResolvedCollectionMethod.ACL) != 0))
                 {
                     var l = searchResult.DistinguishedName.ToLower();
                     if (l.Contains("cn=domainupdates,cn=system"))
