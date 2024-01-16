@@ -76,7 +76,7 @@ namespace Sharphound.Producers
                 foreach (var searchResult in Context.LDAPUtils.QueryLDAP(ldapData.Filter.GetFilter(), SearchScope.Subtree,
                              ldapData.Props.Distinct().ToArray(), cancellationToken, domain.Name,
                              adsPath: Context.SearchBase,
-                             includeAcl: (Context.ResolvedCollectionMethods & ResolvedCollectionMethod.ACL) != 0))
+                             includeAcl: (Context.ResolvedCollectionMethods & ResolvedCollectionMethod.ACL) != 0 || (Context.ResolvedCollectionMethods & ResolvedCollectionMethod.CertServices) != 0))
                 {
                     var l = searchResult.DistinguishedName.ToLower();
                     if (l.Contains("cn=domainupdates,cn=system"))
@@ -114,7 +114,7 @@ namespace Sharphound.Producers
                     foreach (var searchResult in Context.LDAPUtils.QueryLDAP(configNcData.Filter.GetFilter(), SearchScope.Subtree,
                                 configNcData.Props.Distinct().ToArray(), cancellationToken, domain.Name,
                                 adsPath: configAdsPath,
-                                includeAcl: (Context.ResolvedCollectionMethods & ResolvedCollectionMethod.ACL) != 0))
+                                includeAcl: (Context.ResolvedCollectionMethods & ResolvedCollectionMethod.ACL) != 0 || (Context.ResolvedCollectionMethods & ResolvedCollectionMethod.CertServices) != 0))
                     {
                         await Channel.Writer.WriteAsync(searchResult, cancellationToken);
                         Context.Logger.LogTrace("Producer wrote {DistinguishedName} to channel", searchResult.DistinguishedName);
