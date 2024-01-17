@@ -619,7 +619,9 @@ namespace Sharphound.Runtime
                 ret.ContainedBy = _containerProcessor.GetContainingObject(entry.DistinguishedName);
             }
 
-            // Collect properties from CA server registry
+            if ((_methods & ResolvedCollectionMethod.CARegistry) != 0)
+            {
+                 // Collect properties from CA server registry
             var cASecurityCollected = false;
             var enrollmentAgentRestrictionsCollected = false;
             var isUserSpecifiesSanEnabledCollected = false;
@@ -648,7 +650,8 @@ namespace Sharphound.Runtime
             ret.Properties.Add("casecuritycollected", cASecurityCollected);
             ret.Properties.Add("enrollmentagentrestrictionscollected", enrollmentAgentRestrictionsCollected);
             ret.Properties.Add("isuserspecifiessanenabledcollected", isUserSpecifiesSanEnabledCollected);
-
+            }
+            
             return ret;
         }
 
