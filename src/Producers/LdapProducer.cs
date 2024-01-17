@@ -109,6 +109,8 @@ namespace Sharphound.Producers
                 if (!configurationNCsCollected.Contains(configAdsPath))
                 {
                     Context.Logger.LogInformation("Beginning LDAP search for {Domain} Configuration NC", domain.Name);
+                    // Ensure we only collect the Configuration NC once per forest
+                    configurationNCsCollected.Add(configAdsPath);
 
                     //Do a basic LDAP search and grab results
                     foreach (var searchResult in Context.LDAPUtils.QueryLDAP(configNcData.Filter.GetFilter(), SearchScope.Subtree,
@@ -119,9 +121,6 @@ namespace Sharphound.Producers
                         await Channel.Writer.WriteAsync(searchResult, cancellationToken);
                         Context.Logger.LogTrace("Producer wrote {DistinguishedName} to channel", searchResult.DistinguishedName);
                     }
-
-                    // Ensure we only collect the Configuration NC once per forest
-                    configurationNCsCollected.Add(configAdsPath);
                 }
                 else
                 {
