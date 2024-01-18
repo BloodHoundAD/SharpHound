@@ -109,6 +109,10 @@ namespace Sharphound.Runtime
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
             ret.Properties.Add("samaccountname", entry.GetProperty(LDAPProperties.SAMAccountName));
+            
+            if (entry.IsMSA()) ret.Properties.Add("msa", true);
+
+            if (entry.IsGMSA()) ret.Properties.Add("gmsa", true);
 
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {
@@ -622,34 +626,34 @@ namespace Sharphound.Runtime
             if ((_methods & ResolvedCollectionMethod.CARegistry) != 0)
             {
                  // Collect properties from CA server registry
-            var cASecurityCollected = false;
-            var enrollmentAgentRestrictionsCollected = false;
-            var isUserSpecifiesSanEnabledCollected = false;
-            var caName = entry.GetProperty(LDAPProperties.Name);
-            var dnsHostName = entry.GetProperty(LDAPProperties.DNSHostName);
-            if ((_methods & ResolvedCollectionMethod.CARegistry) != 0 && caName != null && dnsHostName != null)
-            {
-                ret.HostingComputer = await _context.LDAPUtils.ResolveHostToSid(dnsHostName, resolvedSearchResult.Domain);
-
-                CARegistryData cARegistryData = new()
+                var cASecurityCollected = false;
+                var enrollmentAgentRestrictionsCollected = false;
+                var isUserSpecifiesSanEnabledCollected = false;
+                var caName = entry.GetProperty(LDAPProperties.Name);
+                var dnsHostName = entry.GetProperty(LDAPProperties.DNSHostName);
+                if ((_methods & ResolvedCollectionMethod.CARegistry) != 0 && caName != null && dnsHostName != null)
                 {
-                    IsUserSpecifiesSanEnabled = _certAbuseProcessor.IsUserSpecifiesSanEnabled(dnsHostName, caName),
-                    EnrollmentAgentRestrictions = await _certAbuseProcessor.ProcessEAPermissions(caName, resolvedSearchResult.Domain, dnsHostName, ret.HostingComputer),
+                    ret.HostingComputer = await _context.LDAPUtils.ResolveHostToSid(dnsHostName, resolvedSearchResult.Domain);
 
-                    // The CASecurity exist in the AD object DACL and in registry of the CA server. We prefer to use the values from registry as they are the ground truth.
-                    // If changes are made on the CA server, registry and the AD object is updated. If changes are made directly on the AD object, the CA server registry is not updated.
-                    CASecurity = await _certAbuseProcessor.ProcessRegistryEnrollmentPermissions(caName, resolvedSearchResult.Domain, dnsHostName, ret.HostingComputer)
-                };
+                    CARegistryData cARegistryData = new()
+                    {
+                        IsUserSpecifiesSanEnabled = _certAbuseProcessor.IsUserSpecifiesSanEnabled(dnsHostName, caName),
+                        EnrollmentAgentRestrictions = await _certAbuseProcessor.ProcessEAPermissions(caName, resolvedSearchResult.Domain, dnsHostName, ret.HostingComputer),
 
-                cASecurityCollected = cARegistryData.CASecurity.Collected;
-                enrollmentAgentRestrictionsCollected = cARegistryData.EnrollmentAgentRestrictions.Collected;
-                isUserSpecifiesSanEnabledCollected = cARegistryData.IsUserSpecifiesSanEnabled.Collected;
-                ret.CARegistryData = cARegistryData;
-            }
+                        // The CASecurity exist in the AD object DACL and in registry of the CA server. We prefer to use the values from registry as they are the ground truth.
+                        // If changes are made on the CA server, registry and the AD object is updated. If changes are made directly on the AD object, the CA server registry is not updated.
+                        CASecurity = await _certAbuseProcessor.ProcessRegistryEnrollmentPermissions(caName, resolvedSearchResult.Domain, dnsHostName, ret.HostingComputer)
+                    };
 
-            ret.Properties.Add("casecuritycollected", cASecurityCollected);
-            ret.Properties.Add("enrollmentagentrestrictionscollected", enrollmentAgentRestrictionsCollected);
-            ret.Properties.Add("isuserspecifiessanenabledcollected", isUserSpecifiesSanEnabledCollected);
+                    cASecurityCollected = cARegistryData.CASecurity.Collected;
+                    enrollmentAgentRestrictionsCollected = cARegistryData.EnrollmentAgentRestrictions.Collected;
+                    isUserSpecifiesSanEnabledCollected = cARegistryData.IsUserSpecifiesSanEnabled.Collected;
+                    ret.CARegistryData = cARegistryData;
+                }
+
+                ret.Properties.Add("casecuritycollected", cASecurityCollected);
+                ret.Properties.Add("enrollmentagentrestrictionscollected", enrollmentAgentRestrictionsCollected);
+                ret.Properties.Add("isuserspecifiessanenabledcollected", isUserSpecifiesSanEnabledCollected);
             }
             
             return ret;
