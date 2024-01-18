@@ -498,10 +498,10 @@ namespace Sharphound.Runtime
             ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
             ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
 
-            if ((_methods & ResolvedCollectionMethod.Container) != 0)
+            if ((_methods & ResolvedCollectionMethod.Container) != 0 || (_methods & ResolvedCollectionMethod.CertServices) != 0)
                 ret.ContainedBy = _containerProcessor.GetContainingObject(entry.DistinguishedName);
 
-            if ((_methods & ResolvedCollectionMethod.ACL) != 0)
+            if ((_methods & ResolvedCollectionMethod.ACL) != 0 || (_methods & ResolvedCollectionMethod.CertServices) != 0)
             {
                 ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry)
                     .ToArray();
@@ -509,7 +509,7 @@ namespace Sharphound.Runtime
                 ret.Properties.Add("isaclprotected", ret.IsACLProtected);
             }
 
-            if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0)
+            if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0 || (_methods & ResolvedCollectionMethod.CertServices) != 0)
             {
                 if (_context.Flags.CollectAllProperties)
                 {
