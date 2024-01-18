@@ -169,6 +169,9 @@ namespace Sharphound.Producers
             {
                 query = allObjectTypesQuery;
                 props.AddRange(CommonProperties.CertAbuseProps);
+                props.AddRange(CommonProperties.ObjectPropsProps);
+                props.AddRange(CommonProperties.ContainerProps);
+                props.AddRange(CommonProperties.ACLProps);
             }
 
             if ((methods & ResolvedCollectionMethod.Container) != 0)
