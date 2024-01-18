@@ -226,6 +226,7 @@ namespace Sharphound.Runtime
             {
                 await compStatusChannel.Writer.WriteAsync(availability.GetCSVStatus(resolvedSearchResult.DisplayName),
                     _cancellationToken);
+                ret.Status = availability;
                 return ret;
             }
 
