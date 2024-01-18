@@ -44,7 +44,7 @@ namespace Sharphound.Producers
 
             foreach (var domain in Context.Domains)
             {
-                Context.Logger.LogInformation("Beginning LDAP search for {Domain}", domain);
+                Context.Logger.LogInformation("Beginning LDAP search for {Domain}", domain.Name);
                 //Do a basic  LDAP search and grab results
                 var successfulConnect = false;
                 try
@@ -64,14 +64,7 @@ namespace Sharphound.Producers
                     continue;
                 }
 
-                await OutputChannel.Writer.WriteAsync(new Domain
-                {
-                    ObjectIdentifier = domain.DomainSid,
-                    Properties = new Dictionary<string, object>
-                    {
-                        { "collected", true },
-                    }
-                });
+                Context.CollectedDomainSids.Add(domain.DomainSid);
 
                 foreach (var searchResult in Context.LDAPUtils.QueryLDAP(ldapData.Filter.GetFilter(), SearchScope.Subtree,
                              ldapData.Props.Distinct().ToArray(), cancellationToken, domain.Name,

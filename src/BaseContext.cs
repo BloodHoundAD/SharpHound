@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -63,6 +64,8 @@ namespace Sharphound
         {
             CurrentLoopTime = $"{DateTime.Now:yyyyMMddHHmmss}";
         }
+
+        public HashSet<string> CollectedDomainSids { get; } = new();
 
         public async Task DoDelay()
         {

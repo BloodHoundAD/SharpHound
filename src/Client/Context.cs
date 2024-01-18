@@ -75,5 +75,6 @@ namespace Sharphound.Client
         string ResolveFileName(string filename, string extension, bool addTimestamp);
         EnumerationDomain[] Domains { get; set; }
         void UpdateLoopTime();
+        public HashSet<string> CollectedDomainSids { get; }
     }
 }

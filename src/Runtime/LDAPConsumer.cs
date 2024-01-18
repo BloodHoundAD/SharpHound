@@ -37,6 +37,11 @@ namespace Sharphound.Runtime
                         watch.Elapsed.TotalMilliseconds, res.DisplayName);
                     if (processed == null)
                         continue;
+
+                    if (processed is Domain d && context.CollectedDomainSids.Contains(d.ObjectIdentifier))
+                    {
+                        d.Properties.Add("collected", true);
+                    }
                     await outputChannel.Writer.WriteAsync(processed);
                 }
                 catch (Exception e)
