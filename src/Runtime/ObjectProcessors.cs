@@ -179,6 +179,8 @@ namespace Sharphound.Runtime
 
             var hasLaps = entry.HasLAPS();
             ret.Properties.Add("haslaps", hasLaps);
+            ret.IsDC = resolvedSearchResult.IsDomainController;
+            ret.DomainSID = resolvedSearchResult.DomainSid;
 
             if ((_methods & ResolvedCollectionMethod.ACL) != 0)
             {
