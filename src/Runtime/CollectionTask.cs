@@ -84,17 +84,15 @@ namespace Sharphound.Runtime
 
             foreach (var wkp in _context.LDAPUtils.GetWellKnownPrincipalOutput(_context.DomainName))
             {
-                if (wkp.ObjectIdentifier.EndsWith(EnterpriseDCSuffix))
-                {
-                    if (wkp is Group g && g.Members.Length == 0)
-                    {
-                        continue;
-                    }
-                }
-                else
+                if (!wkp.ObjectIdentifier.EndsWith(EnterpriseDCSuffix))
                 {
                     wkp.Properties["reconcile"] = false;
                 }
+                else if (wkp is Group g && g.Members.Length == 0)
+                {
+                    continue;
+                }
+
                 await _outputChannel.Writer.WriteAsync(wkp);
             }
                 
