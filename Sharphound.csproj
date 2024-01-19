@@ -40,8 +40,8 @@
         <Reference Include="System.DirectoryServices.Protocols" />
         <Reference Include="System.IO.Compression" />
     </ItemGroup>
-<!--    <Target Name="PS1" AfterTargets="Build">-->
-<!--        <Message Text="Test" />-->
-<!--        <Exec Command="powershell -ep bypass -c &quot;. '$(ProjectDir)src\Powershell\Out-CompressedDLL.ps1';Out-CompressedDll -FilePath '$(TargetPath)' -TemplatePath '$(ProjectDir)src\\Powershell\Template.ps1' | Out-File -Encoding ASCII '$(TargetDir)$(TargetName).ps1'&quot;" />-->
-<!--    </Target>-->
+    <Target Name="PS1" AfterTargets="Build">
+        <Message Text="Test" />
+        <Exec Command="powershell -ep bypass -c &quot;. '$(ProjectDir)src\Powershell\Out-CompressedDLL.ps1';Out-CompressedDll -FilePath '$(TargetPath)' -TemplatePath '$(ProjectDir)src\\Powershell\Template.ps1' | Out-File -Encoding ASCII '$(TargetDir)$(TargetName).ps1'&quot;" />
+    </Target>
 </Project>
