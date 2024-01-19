@@ -130,7 +130,7 @@ namespace Sharphound.Producers
 
                 if ((methods & ResolvedCollectionMethod.DCRegistry) != 0)
                 {
-                    query = query.AddComputers();
+                    query = query.AddComputers(CommonFilters.DomainControllers);
                     props.AddRange(CommonProperties.ComputerMethodProps);
                 }
             }
@@ -169,6 +169,9 @@ namespace Sharphound.Producers
             {
                 query = allObjectTypesQuery;
                 props.AddRange(CommonProperties.CertAbuseProps);
+                props.AddRange(CommonProperties.ObjectPropsProps);
+                props.AddRange(CommonProperties.ContainerProps);
+                props.AddRange(CommonProperties.ACLProps);
             }
 
             if ((methods & ResolvedCollectionMethod.Container) != 0)

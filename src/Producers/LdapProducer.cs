@@ -31,6 +31,11 @@ namespace Sharphound.Producers
             var log = Context.Logger;
             var utils = Context.LDAPUtils;
 
+            if (string.IsNullOrEmpty(ldapData.Filter.GetFilter()))
+            {
+                return;
+            }
+
             if (Context.Flags.CollectAllProperties)
             {
                 log.LogDebug("CollectAllProperties set. Changing LDAP properties to *");
@@ -39,7 +44,7 @@ namespace Sharphound.Producers
 
             foreach (var domain in Context.Domains)
             {
-                Context.Logger.LogInformation("Beginning LDAP search for {Domain}", domain);
+                Context.Logger.LogInformation("Beginning LDAP search for {Domain}", domain.Name);
                 //Do a basic  LDAP search and grab results
                 var successfulConnect = false;
                 try
@@ -59,14 +64,7 @@ namespace Sharphound.Producers
                     continue;
                 }
 
-                await OutputChannel.Writer.WriteAsync(new Domain
-                {
-                    ObjectIdentifier = domain.DomainSid,
-                    Properties = new Dictionary<string, object>
-                    {
-                        { "collected", true },
-                    }
-                });
+                Context.CollectedDomainSids.Add(domain.DomainSid);
 
                 foreach (var searchResult in Context.LDAPUtils.QueryLDAP(ldapData.Filter.GetFilter(), SearchScope.Subtree,
                              ldapData.Props.Distinct().ToArray(), cancellationToken, domain.Name,
@@ -83,7 +81,6 @@ namespace Sharphound.Producers
                     Context.Logger.LogTrace("Producer wrote {DistinguishedName} to channel", searchResult.DistinguishedName);
                 }
             }
-
         }
 
         /// <summary>
@@ -105,19 +102,18 @@ namespace Sharphound.Producers
                 if (!configurationNCsCollected.Contains(configAdsPath))
                 {
                     Context.Logger.LogInformation("Beginning LDAP search for {Domain} Configuration NC", domain.Name);
+                    // Ensure we only collect the Configuration NC once per forest
+                    configurationNCsCollected.Add(configAdsPath);
 
                     //Do a basic LDAP search and grab results
                     foreach (var searchResult in Context.LDAPUtils.QueryLDAP(configNcData.Filter.GetFilter(), SearchScope.Subtree,
                                 configNcData.Props.Distinct().ToArray(), cancellationToken, domain.Name,
                                 adsPath: configAdsPath,
-                                includeAcl: (Context.ResolvedCollectionMethods & ResolvedCollectionMethod.ACL) != 0))
+                                includeAcl: (Context.ResolvedCollectionMethods & ResolvedCollectionMethod.ACL) != 0 || (Context.ResolvedCollectionMethods & ResolvedCollectionMethod.CertServices) != 0))
                     {
                         await Channel.Writer.WriteAsync(searchResult, cancellationToken);
                         Context.Logger.LogTrace("Producer wrote {DistinguishedName} to channel", searchResult.DistinguishedName);
                     }
-
-                    // Ensure we only collect the Configuration NC once per forest
-                    configurationNCsCollected.Add(configAdsPath);
                 }
                 else
                 {
