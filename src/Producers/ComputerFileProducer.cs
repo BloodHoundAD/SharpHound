@@ -46,7 +46,7 @@ namespace Sharphound.Producers
                     string sid;
                     if (!computer.StartsWith("S-1-5-21"))
                         //The computer isn't a SID so try to convert it to one
-                        sid = await Context.LDAPUtils.ResolveHostToSid(computer, Context.DomainName);
+                        sid = await Context.LDAPUtils.ResolveHostToSidWithHostnameFallback(computer, Context.DomainName);
                     else
                         //The computer is already a sid, so just store it off
                         sid = computer;

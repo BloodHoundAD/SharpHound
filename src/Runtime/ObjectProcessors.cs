@@ -638,6 +638,13 @@ namespace Sharphound.Runtime
                 {
                     ret.HostingComputer = await _context.LDAPUtils.ResolveHostToSid(dnsHostName, resolvedSearchResult.Domain);
 
+                    // If we don't resolve a SID to this CA, throw it out
+                    if (ret.HostingComputer == null)
+                    {
+                        _log.LogWarning("Unable to resolve Enterprise CA host to SID.", dnsHostName, resolvedSearchResult.Domain);
+                        return null;
+                    }
+
                     CARegistryData cARegistryData = new()
                     {
                         IsUserSpecifiesSanEnabled = _certAbuseProcessor.IsUserSpecifiesSanEnabled(dnsHostName, caName),
