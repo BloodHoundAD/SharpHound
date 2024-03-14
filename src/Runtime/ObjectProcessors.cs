@@ -638,11 +638,11 @@ namespace Sharphound.Runtime
                 {
                     ret.HostingComputer = await _context.LDAPUtils.ResolveHostToSid(dnsHostName, resolvedSearchResult.Domain);
 
-                    // If ResolveHostToSid does not return a valid SID, we don't want to process this CA
-                    if (ret.HostingComputer == null || !ret.HostingComputer.StartsWith("S-1-"))
+                    // If ResolveHostToSid does not return a valid SID, we don't want to record this host
+                    if (ret.HostingComputer != null && !ret.HostingComputer.StartsWith("S-1-"))
                     {
-                        _log.LogWarning("CA could not be resolved to a SID, skipping.", dnsHostName, resolvedSearchResult.Domain);
-                        return null;
+                        _log.LogWarning("CA host could not be resolved to a SID.", dnsHostName, resolvedSearchResult.Domain);
+                        ret.HostingComputer = null;
                     }
 
                     CARegistryData cARegistryData = new()
