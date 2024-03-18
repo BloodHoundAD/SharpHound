@@ -534,6 +534,13 @@ namespace Sharphound
                         return;
                     context = links.SetSessionUserName(options.OverrideUserName, context);
                     context = links.InitCommonLib(context);
+
+                    if (!File.Exists("SharpHoundRPC.dll"))
+                    {
+                        logger.LogCritical("SharpHoundRPC.dll not found. Please reinstall SharpHound and try again.");
+                        return;
+                    }
+
                     context = links.GetDomainsForEnumeration(context);
                     if (context.Flags.IsFaulted)
                         return;
