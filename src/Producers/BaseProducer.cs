@@ -151,7 +151,7 @@ namespace Sharphound.Producers
             props.AddRange(CommonProperties.TypeResolutionProps);
 
             var methods = Context.ResolvedCollectionMethods;
-            var allObjectTypesQuery = new LDAPFilter().AddContainers().AddConfiguration().AddCertificateTemplates().AddCertificateAuthorities().AddEnterpriseCertificationAuthorities();
+            var allObjectTypesQuery = new LDAPFilter().AddContainers().AddConfiguration().AddCertificateTemplates().AddCertificateAuthorities().AddEnterpriseCertificationAuthorities().AddIssuancePolicies();
 
             if ((methods & ResolvedCollectionMethod.ObjectProps) != 0)
             {

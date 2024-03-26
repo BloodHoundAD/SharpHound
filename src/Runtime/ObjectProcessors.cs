@@ -80,15 +80,17 @@ namespace Sharphound.Runtime
                 case Label.Configuration:
                     return ProcessContainerObject(entry, resolvedSearchResult);
                 case Label.RootCA:
-                    return await ProcessRootCA(entry, resolvedSearchResult);
+                    return ProcessRootCA(entry, resolvedSearchResult);
                 case Label.AIACA:
-                    return await ProcessAIACA(entry, resolvedSearchResult);
+                    return ProcessAIACA(entry, resolvedSearchResult);
                 case Label.EnterpriseCA:
                     return await ProcessEnterpriseCA(entry, resolvedSearchResult);
                 case Label.NTAuthStore:
-                    return await ProcessNTAuthStore(entry, resolvedSearchResult);
+                    return ProcessNTAuthStore(entry, resolvedSearchResult);
                 case Label.CertTemplate:
-                    return await ProcessCertTemplate(entry, resolvedSearchResult);
+                    return ProcessCertTemplate(entry, resolvedSearchResult);
+                case Label.IssuancePolicy:
+                    return ProcessIssuancePolicy(entry, resolvedSearchResult);
                 case Label.Base:
                     return null;
                 default:
@@ -525,7 +527,7 @@ namespace Sharphound.Runtime
             return ret;
         }
 
-        private async Task<RootCA> ProcessRootCA(ISearchResultEntry entry, ResolvedSearchResult resolvedSearchResult)
+        private RootCA ProcessRootCA(ISearchResultEntry entry, ResolvedSearchResult resolvedSearchResult)
         {
             var ret = new RootCA
             {
@@ -560,7 +562,7 @@ namespace Sharphound.Runtime
             return ret;
         }
 
-        private async Task<AIACA> ProcessAIACA(ISearchResultEntry entry, ResolvedSearchResult resolvedSearchResult)
+        private AIACA ProcessAIACA(ISearchResultEntry entry, ResolvedSearchResult resolvedSearchResult)
         {
             var ret = new AIACA
             {
@@ -669,7 +671,7 @@ namespace Sharphound.Runtime
             return ret;
         }
 
-        private async Task<NTAuthStore> ProcessNTAuthStore(ISearchResultEntry entry, ResolvedSearchResult resolvedSearchResult)
+        private NTAuthStore ProcessNTAuthStore(ISearchResultEntry entry, ResolvedSearchResult resolvedSearchResult)
         {
             var ret = new NTAuthStore
             {
@@ -710,7 +712,7 @@ namespace Sharphound.Runtime
             return ret;
         }
 
-        private async Task<CertTemplate> ProcessCertTemplate(ISearchResultEntry entry, ResolvedSearchResult resolvedSearchResult)
+        private CertTemplate ProcessCertTemplate(ISearchResultEntry entry, ResolvedSearchResult resolvedSearchResult)
         {
             var ret = new CertTemplate
             {
@@ -735,6 +737,41 @@ namespace Sharphound.Runtime
                 ret.Properties.Merge(certTemplatesProps);
             }
 
+            if ((_methods & ResolvedCollectionMethod.Container) != 0 || (_methods & ResolvedCollectionMethod.CertServices) != 0)
+            {
+                ret.ContainedBy = _containerProcessor.GetContainingObject(entry.DistinguishedName);
+            }
+
+            return ret;
+        }
+
+        private IssuancePolicy ProcessIssuancePolicy(ISearchResultEntry entry,
+            ResolvedSearchResult resolvedSearchResult)
+        {
+            var ret = new IssuancePolicy
+            {
+                ObjectIdentifier = resolvedSearchResult.ObjectId
+            };
+            
+            ret.Properties.Add("domain", resolvedSearchResult.Domain);
+            ret.Properties.Add("name", resolvedSearchResult.DisplayName);
+            ret.Properties.Add("distinguishedname", entry.DistinguishedName.ToUpper());
+            ret.Properties.Add("domainsid", resolvedSearchResult.DomainSid);
+            
+            if ((_methods & ResolvedCollectionMethod.ACL) != 0 || (_methods & ResolvedCollectionMethod.CertServices) != 0)
+            {
+                ret.Aces = _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArray();
+                ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
+                ret.Properties.Add("isaclprotected", ret.IsACLProtected);
+            }
+            
+            if ((_methods & ResolvedCollectionMethod.ObjectProps) != 0 || (_methods & ResolvedCollectionMethod.CertServices) != 0)
+            {
+                var issuancePolicyProps = _ldapPropertyProcessor.ReadIssuancePolicyProperties(entry);
+                ret.Properties.Merge(issuancePolicyProps.Props);
+                ret.GroupLink = issuancePolicyProps.GroupLink;
+            }
+            
             if ((_methods & ResolvedCollectionMethod.Container) != 0 || (_methods & ResolvedCollectionMethod.CertServices) != 0)
             {
                 ret.ContainedBy = _containerProcessor.GetContainingObject(entry.DistinguishedName);
