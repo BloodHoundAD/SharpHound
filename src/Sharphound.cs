@@ -130,7 +130,7 @@ namespace Sharphound
                 }
                 catch (Exception e)
                 {
-                    context.Logger.LogCritical("unable to write to target directory");
+                    context.Logger.LogCritical(e, "unable to write to target directory");
                     context.Flags.IsFaulted = true;
                 }
             }
