@@ -126,7 +126,7 @@
 
     .PARAMETER LdapPort
 
-        Port LDAP is running on. Defaults to 389/686 for LDAPS
+        Port LDAP is running on. Defaults to 389/636 for LDAPS
 
     .PARAMETER SecureLDAP
 
