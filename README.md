@@ -30,7 +30,7 @@ dotnet build
 
 ```
   -c, --collectionmethods    (Default: Default) Collection Methods: Container, Group, LocalGroup, GPOLocalGroup,
-                             Session, LoggedOn, ObjectProps, ACL, ComputerOnly, Trusts, Default, RDP, DCOM, DCOnly, CARegistry, DCRegistry, CertServices
+                             Session, LoggedOn, ObjectProps, ACL, ComputerOnly, Trusts, Default, RDP, DCOM, DCOnly, UserRights, CARegistry, DCRegistry, CertServices
 
   -d, --domain               Specify domain to enumerate
 
