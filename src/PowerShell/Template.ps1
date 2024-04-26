@@ -25,16 +25,17 @@
             Trusts - Enumerate domain trust data
             ACL - Collect ACL (Access Control List) data
             Container - Collect GPO/OU Data
-            ComputerOnly - Collects Local Group and Session data
-            GPOLocalGroup - Collects Local Group information using GPO (Group Policy Objects)
-            LoggedOn - Collects session information using privileged methods (needs admin!)
-            ObjectProps - Collects node property information for users and computers
-            SPNTargets - Collects SPN targets (currently only MSSQL)
-            Default - Collects Group Membership, Local Admin, Sessions, Containers, ACLs and Domain Trusts
-            DcOnly - Collects Group Membership, ACLs, ObjectProps, Trusts, Containers, and GPO Admins
+            ComputerOnly - Collect Local Group, Session data, User Rights, CA Registry, and DC Registry
+            GPOLocalGroup - Collect Local Group information using GPO (Group Policy Objects)
+            LoggedOn - Collect session information using privileged methods (needs admin!)
+            ObjectProps - Collect node property information for users and computers
+            SPNTargets - Collect SPN targets (currently only MSSQL)
+            Default - Collect Group Membership, Local Admin, Sessions, Containers, ACLs, Domain Trusts, and ADCS objects
+            DcOnly - Collect Group Membership, ACLs, ObjectProps, Trusts, Containers, GPO Admins, and ADCS objects
+            UserRights - Collect User Rights Assignment from domain computers (needs admin)
             CARegistry - Collect ADCS properties from registry of Certificate Authority servers
             DCRegistry - Collect properties from registry of Domain Controller servers
-            CertServices - Collect ADCS properties from Certificate Services
+            CertServices - Collect ADCS objects from Certificate Services
             All - Collect all data
 
         This can be a list of comma separated valued as well to run multiple collection methods!
