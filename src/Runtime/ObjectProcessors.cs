@@ -619,8 +619,10 @@ namespace Sharphound.Runtime
                 var props = LDAPPropertyProcessor.ReadEnterpriseCAProperties(entry);
                 ret.Properties.Merge(props);
 
-                // Enabled cert templates
-                ret.EnabledCertTemplates = _certAbuseProcessor.ProcessCertTemplates(entry.GetArrayProperty(LDAPProperties.CertificateTemplates), resolvedSearchResult.Domain).ToArray();
+                // Enabled/published cert templates
+                (IEnumerable<TypedPrincipal> resolvedTemplates, IEnumerable<string> unresolvedTemplates) = _certAbuseProcessor.ProcessCertTemplates(entry.GetArrayProperty(LDAPProperties.CertificateTemplates), resolvedSearchResult.Domain);
+                ret.EnabledCertTemplates = resolvedTemplates.ToArray();
+                ret.Properties.Add("unresolvedpublishedtemplates", unresolvedTemplates.ToArray());
             }
 
             if ((_methods & ResolvedCollectionMethod.Container) != 0 || (_methods & ResolvedCollectionMethod.CertServices) != 0)
