@@ -12,7 +12,7 @@ namespace Sharphound.Runtime
 {
     public static class LDAPConsumer
     {
-        internal static async Task ConsumeSearchResults(Channel<ISearchResultEntry> inputChannel,
+        internal static async Task ConsumeSearchResults(Channel<IDirectoryObject> inputChannel,
             Channel<CSVComputerStatus> computerStatusChannel, Channel<OutputBase> outputChannel, IContext context,
             int id)
         {
@@ -24,10 +24,9 @@ namespace Sharphound.Runtime
             await foreach (var item in inputChannel.Reader.ReadAllAsync())
                 try
                 {
-                    var res = item.ResolveBloodHoundInfo();
-
-                    if (res == null)
+                    if (await LdapUtils.ResolveSearchResult(item, context.LDAPUtils) is not (true, var res) || res == null) {
                         continue;
+                    }
 
                     log.LogTrace("Consumer {ThreadID} started processing {obj}", threadId, res.DisplayName);
                     watch.Start();

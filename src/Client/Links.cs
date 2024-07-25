@@ -9,15 +9,15 @@ namespace Sharphound.Client
     /// <typeparam name="T">A context to be populated.</typeparam>
     public interface Links<T>
     {
-        IContext Initialize(IContext context, LDAPConfig options);
+        IContext Initialize(IContext context, LdapConfig options);
 
-        IContext
+        Task<IContext>
             TestConnection(
                 T context); //Initial LDAP connection test. Search for the well known administrator SID to make sure we can connect successfully.
 
         IContext SetSessionUserName(string overrideUserName, T context);
         IContext InitCommonLib(T context);
-        IContext GetDomainsForEnumeration(T context);
+        Task<IContext> GetDomainsForEnumeration(T context);
         IContext StartBaseCollectionTask(T context);
         Task<IContext> AwaitBaseRunCompletion(T context);
         IContext StartLoopTimer(T context);

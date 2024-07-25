@@ -5,13 +5,13 @@ namespace Sharphound.Producers
 {
     public static class StealthContext
     {
-        private static Dictionary<string, ISearchResultEntry> _stealthTargetSids;
+        private static Dictionary<string, IDirectoryObject> _stealthTargetSids;
 
         /// <summary>
         ///     Sets the list of stealth targets or appends to it if necessary
         /// </summary>
         /// <param name="targets"></param>
-        internal static void AddStealthTargetSids(Dictionary<string, ISearchResultEntry> targets)
+        internal static void AddStealthTargetSids(Dictionary<string, IDirectoryObject> targets)
         {
             if (_stealthTargetSids == null)
                 _stealthTargetSids = targets;
@@ -26,7 +26,7 @@ namespace Sharphound.Producers
             return _stealthTargetSids.ContainsKey(sid);
         }
 
-        internal static IEnumerable<ISearchResultEntry> GetSearchResultEntries()
+        internal static IEnumerable<IDirectoryObject> GetSearchResultEntries()
         {
             return _stealthTargetSids.Values;
         }
