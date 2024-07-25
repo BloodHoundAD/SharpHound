@@ -636,6 +636,7 @@ namespace Sharphound.Runtime
                 var cASecurityCollected = false;
                 var enrollmentAgentRestrictionsCollected = false;
                 var isUserSpecifiesSanEnabledCollected = false;
+                var roleSeparationEnabledCollected = false;
                 var caName = entry.GetProperty(LDAPProperties.Name);
                 var dnsHostName = entry.GetProperty(LDAPProperties.DNSHostName);
                 if ((_methods & ResolvedCollectionMethod.CARegistry) != 0 && caName != null && dnsHostName != null)
@@ -652,6 +653,7 @@ namespace Sharphound.Runtime
                     CARegistryData cARegistryData = new()
                     {
                         IsUserSpecifiesSanEnabled = _certAbuseProcessor.IsUserSpecifiesSanEnabled(dnsHostName, caName),
+                        RoleSeparationEnabled = _certAbuseProcessor.RoleSeparationEnabled(dnsHostName, caName),
                         EnrollmentAgentRestrictions = await _certAbuseProcessor.ProcessEAPermissions(caName, resolvedSearchResult.Domain, dnsHostName, ret.HostingComputer),
 
                         // The CASecurity exist in the AD object DACL and in registry of the CA server. We prefer to use the values from registry as they are the ground truth.
@@ -662,12 +664,14 @@ namespace Sharphound.Runtime
                     cASecurityCollected = cARegistryData.CASecurity.Collected;
                     enrollmentAgentRestrictionsCollected = cARegistryData.EnrollmentAgentRestrictions.Collected;
                     isUserSpecifiesSanEnabledCollected = cARegistryData.IsUserSpecifiesSanEnabled.Collected;
+                    roleSeparationEnabledCollected = cARegistryData.RoleSeparationEnabled.Collected;
                     ret.CARegistryData = cARegistryData;
                 }
 
                 ret.Properties.Add("casecuritycollected", cASecurityCollected);
                 ret.Properties.Add("enrollmentagentrestrictionscollected", enrollmentAgentRestrictionsCollected);
                 ret.Properties.Add("isuserspecifiessanenabledcollected", isUserSpecifiesSanEnabledCollected);
+                ret.Properties.Add("roleseparationenabledcollected", roleSeparationEnabledCollected);
             }
             
             return ret;
