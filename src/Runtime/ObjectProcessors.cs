@@ -32,6 +32,7 @@ namespace Sharphound.Runtime
         private readonly GroupProcessor _groupProcessor;
         private readonly LDAPPropertyProcessor _ldapPropertyProcessor;
         private readonly GPOLocalGroupProcessor _gpoLocalGroupProcessor;
+        private readonly GPOLmCompatibilityLevelProcessor _gpoLmCompatibilityLevelProcessor;
         private readonly UserRightsAssignmentProcessor _userRightsAssignmentProcessor;
         private readonly LocalGroupProcessor _localGroupProcessor;
         private readonly ILogger _log;
@@ -52,6 +53,7 @@ namespace Sharphound.Runtime
             _groupProcessor = new GroupProcessor(context.LDAPUtils);
             _containerProcessor = new ContainerProcessor(context.LDAPUtils);
             _gpoLocalGroupProcessor = new GPOLocalGroupProcessor(context.LDAPUtils);
+            _gpoLmCompatibilityLevelProcessor = new GPOLmCompatibilityLevelProcessor(context.LDAPUtils);
             _userRightsAssignmentProcessor = new UserRightsAssignmentProcessor(context.LDAPUtils);
             _localGroupProcessor = new LocalGroupProcessor(context.LDAPUtils);
             _methods = context.ResolvedCollectionMethods;
@@ -71,7 +73,7 @@ namespace Sharphound.Runtime
                 case Label.Group:
                     return ProcessGroupObject(entry, resolvedSearchResult);
                 case Label.GPO:
-                    return ProcessGPOObject(entry, resolvedSearchResult);
+                    return await ProcessGPOObject(entry, resolvedSearchResult);
                 case Label.Domain:
                     return await ProcessDomainObject(entry, resolvedSearchResult);
                 case Label.OU:
@@ -409,7 +411,7 @@ namespace Sharphound.Runtime
             return ret;
         }
 
-        private GPO ProcessGPOObject(ISearchResultEntry entry,
+        private async Task<GPO> ProcessGPOObject(ISearchResultEntry entry,
             ResolvedSearchResult resolvedSearchResult)
         {
             var ret = new GPO
@@ -438,6 +440,8 @@ namespace Sharphound.Runtime
                         ret.Properties);
                 }
             }
+            ret.NTLMv1Enabled = await _gpoLmCompatibilityLevelProcessor.ReadGPOLmCompatibilityLevel(entry);
+            ret.Properties.Add("ntlmv1", ret.NTLMv1Enabled);
 
             return ret;
         }
