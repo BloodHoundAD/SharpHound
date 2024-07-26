@@ -24,7 +24,7 @@ namespace Sharphound
             }
         }
 
-        public static string GetDNSName(this ISearchResultEntry entry, string overrideDNSName)
+        public static string GetDNSName(this IDirectoryObject entry, string overrideDNSName)
         {
             var shortName = entry.GetProperty("samaccountname")?.TrimEnd('$');
             var dns = entry.GetProperty("dnshostname");
@@ -111,10 +111,10 @@ namespace Sharphound
         /// Removes non-computer collection methods from specified ones for looping
         /// </summary>
         /// <returns></returns>
-        internal static ResolvedCollectionMethod GetLoopCollectionMethods(this ResolvedCollectionMethod methods)
+        internal static CollectionMethod GetLoopCollectionMethods(this CollectionMethod methods)
         {
-            const ResolvedCollectionMethod computerCollectionMethods = ResolvedCollectionMethod.LocalGroups | ResolvedCollectionMethod.LoggedOn |
-                                                                       ResolvedCollectionMethod.Session;
+            const CollectionMethod computerCollectionMethods = CollectionMethod.LocalGroups | CollectionMethod.LoggedOn |
+                                                                       CollectionMethod.Session;
             return methods & computerCollectionMethods;
         }
     }

@@ -27,5 +27,6 @@ namespace Sharphound.Client
         public bool SearchForest { get; set; }
         public bool RecurseDomains { get; set; }
         public bool DoLocalAdminSessionEnum { get; set; }
+        public bool ParititonLdapQueries { get; set; }
     }
 }
