@@ -93,8 +93,22 @@ namespace Sharphound {
                 return context;
             }
 
+            if (string.IsNullOrWhiteSpace(context.DomainName)) {
+                if (!context.LDAPUtils.GetDomain(out var d)) {
+                    context.Logger.LogCritical("unable to get current domain");
+                    context.Flags.IsFaulted = true;
+                } else {
+                    context.DomainName = d.Name;
+                    context.Logger.LogInformation("Resolved current domain to {Domain}", d.Name);
+                }
+            }
+
             //Check some loop options
-            if (!context.Flags.Loop) return context;
+            if (!context.Flags.Loop) {
+                context.Logger.LogTrace("Exiting initialize link");
+                return context;
+            }
+
             //If loop is set, ensure we actually set options properly
             if (context.LoopDuration == TimeSpan.Zero) {
                 context.Logger.LogTrace("Loop specified without a duration. Defaulting to 2 hours!");
@@ -117,13 +131,14 @@ namespace Sharphound {
                 }
             }
 
+
             context.Logger.LogTrace("Exiting initialize link");
 
             return context;
         }
 
         public async Task<IContext> TestConnection(IContext context) {
-            context.Logger.LogTrace("Entering TestConnection link");
+            context.Logger.LogTrace("Entering TestConnection link, testing domain {Domain}", context.DomainName);
             //2. TestConnection()
             // Initial LDAP connection test. Search for the well known administrator SID to make sure we can connect successfully.
             if (await context.LDAPUtils.TestLdapConnection(context.DomainName) is (false, var message)) {
@@ -198,7 +213,7 @@ namespace Sharphound {
                 Forest forest;
                 try {
                     forest = dObj.Forest;
-                } catch (Exception e){
+                } catch (Exception e) {
                     context.Logger.LogError("Unable to get forest object for SearchForest: {Message}", e.Message);
                     context.Flags.IsFaulted = true;
                     return context;
@@ -210,6 +225,7 @@ namespace Sharphound {
                     if (!entry.TryGetSecurityIdentifier(out var domainSid)) {
                         continue;
                     }
+
                     temp.Add(new EnumerationDomain() {
                         Name = d.Name,
                         DomainSid = domainSid
@@ -227,7 +243,7 @@ namespace Sharphound {
                 context.Flags.IsFaulted = true;
                 return context;
             }
-            
+
             var domain = domainObject?.Name ?? context.DomainName;
             if (domain == null) {
                 context.Logger.LogError("Unable to resolve a domain to use, manually specify one or check spelling");
@@ -235,7 +251,8 @@ namespace Sharphound {
                 return context;
             }
 
-            if (domainObject != null && domainObject.GetDirectoryEntry().ToDirectoryObject().TryGetSecurityIdentifier(out var sid)) {
+            if (domainObject != null && domainObject.GetDirectoryEntry().ToDirectoryObject()
+                    .TryGetSecurityIdentifier(out var sid)) {
                 context.Domains = new[] {
                     new EnumerationDomain {
                         Name = domain,
@@ -250,7 +267,7 @@ namespace Sharphound {
                     }
                 };
             }
-            
+
             context.Logger.LogTrace("Exiting GetDomainsForEnumeration");
             return context;
         }
@@ -267,7 +284,7 @@ namespace Sharphound {
 
             var trustHelper = new DomainTrustProcessor(utils);
             var dSidSuccess = domain.GetDirectoryEntry().ToDirectoryObject().TryGetSecurityIdentifier(out var dSid);
-            
+
             var dName = domain.Name;
             enumerationQueue.Enqueue((dSid, dName));
             domainResults.Add(new EnumerationDomain {
@@ -420,7 +437,7 @@ namespace Sharphound {
                         SearchForest = options.SearchForest,
                         RecurseDomains = options.RecurseDomains,
                         DoLocalAdminSessionEnum = options.DoLocalAdminSessionEnum,
-                        ParititonLdapQueries = options.PartitionLdapQueries 
+                        ParititonLdapQueries = options.PartitionLdapQueries
                     };
 
                     var ldapOptions = new LdapConfig {
