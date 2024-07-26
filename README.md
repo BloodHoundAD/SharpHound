@@ -4,7 +4,9 @@
 
 ## Get SharpHound
 
-The latest build of SharpHound will always be in the BloodHound repository [here](https://github.com/BloodHoundAD/BloodHound/tree/master/Collectors)
+The latest build of SharpHound will always be found [here](https://github.com/BloodHoundAD/SharpHound/releases).
+
+To determine the SharpHound version compatible with a deployed BloodHound CE instance, login to BloodHound CE's web UI and click on ⚙️ (Settings) → Download Collectors. Then, click either the "Download SharpHound" button in the user interface or use the displayed SharpHound version to download the appropriate [release binary](https://github.com/BloodHoundAD/SharpHound/releases). Alternatively, compile a SharpHound binary from the corresponding release commit.
 
 ## Compile Instructions
 
@@ -26,8 +28,8 @@ dotnet restore .
 dotnet build
 ```
 
-# CLI
-
+# CLI Arguments
+The listing below details the CLI arguments SharpHound supports. Additional details about these options can be found in the [BloodHound CE Collection documentation](https://support.bloodhoundenterprise.io/hc/en-us/articles/17481375424795-All-SharpHound-Community-Edition-Flags-Explained).
 ```
   -c, --collectionmethods    (Default: Default) Collection Methods: Container, Group, LocalGroup, GPOLocalGroup,
                              Session, LoggedOn, ObjectProps, ACL, ComputerOnly, Trusts, Default, RDP, DCOM, DCOnly, UserRights, CARegistry, DCRegistry, CertServices
