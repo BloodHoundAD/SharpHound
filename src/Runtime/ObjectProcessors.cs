@@ -583,11 +583,7 @@ namespace Sharphound.Runtime {
                     if (await _context.LDAPUtils.ResolveHostToSid(dnsHostName, resolvedSearchResult.DomainSid) is
                             (true, var sid) && sid.StartsWith("S-1-")) {
                         ret.HostingComputer = sid;
-                    }
-
-                    // If ResolveHostToSid does not return a valid SID, we don't want to record this host
-                    if (ret.HostingComputer != null && !ret.HostingComputer.StartsWith("S-1-")) {
-                        ret.HostingComputer = null;
+                    } else {
                         _log.LogWarning("CA {Name} host ({Dns}) could not be resolved to a SID.", caName, dnsHostName);
                     }
 
