@@ -349,6 +349,10 @@ namespace Sharphound.Runtime {
             var ret = new Domain {
                 ObjectIdentifier = resolvedSearchResult.ObjectId
             };
+            
+            if (await _context.LDAPUtils.GetForest(resolvedSearchResult.DisplayName) is (true, var forest) && await _context.LDAPUtils.GetDomainSidFromDomainName(forest) is (true, var forestSid)) {
+                ret.ForestRootIdentifier = forestSid;
+            }
 
             ret.Properties = new Dictionary<string, object>(GetCommonProperties(entry, resolvedSearchResult));
 
