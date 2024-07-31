@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Sharphound.Client;
 using SharpHoundCommonLib;
+using SharpHoundCommonLib.Enums;
 using SharpHoundCommonLib.OutputTypes;
 
 namespace Sharphound.Runtime
@@ -24,11 +25,14 @@ namespace Sharphound.Runtime
             await foreach (var item in inputChannel.Reader.ReadAllAsync())
                 try
                 {
-                    if (await LdapUtils.ResolveSearchResult(item, context.LDAPUtils) is not (true, var res) || res == null) {
+                    if (await LdapUtils.ResolveSearchResult(item, context.LDAPUtils) is not (true, var res) || res == null || res.ObjectType == Label.Base) {
+                        if (item.TryGetDistinguishedName(out var dn)) {
+                            log.LogTrace("Consumer failed to resolve entry for {item} or label was Base", dn);
+                        }
                         continue;
                     }
 
-                    log.LogTrace("Consumer {ThreadID} started processing {obj}", threadId, res.DisplayName);
+                    log.LogTrace("Consumer {ThreadID} started processing {obj} ({type})", threadId, res.DisplayName, res.ObjectType);
                     watch.Start();
                     var processed = await processor.ProcessObject(item, res, computerStatusChannel);
                     watch.Stop();
