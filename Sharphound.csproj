@@ -6,8 +6,8 @@
         <LangVersion>latest</LangVersion>
         <DebugType>full</DebugType>
         <ApplicationIcon>favicon.ico</ApplicationIcon>
-        <Version>2.4.1</Version>
-        <FileVersion>2.4.1</FileVersion>
+        <Version>2.5.4</Version>
+        <FileVersion>2.5.4</FileVersion>
         <Company>SpecterOps</Company>
         <Product>SharpHound</Product>
         <AssemblyName>SharpHound</AssemblyName>
@@ -21,19 +21,19 @@
         <PackageReference Include="Fody" Version="6.6.0">
           <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="5.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-        <PackageReference Include="SharpHoundCommon" Version="3.1.8" />
-        <PackageReference Include="SharpHoundRPC" Version="3.1.8" />
+        <PackageReference Include="SharpHoundCommon" Version="4.0.4" />
+        <PackageReference Include="SharpHoundRPC" Version="4.0.4" />
         <PackageReference Include="SharpZipLib" Version="1.3.3" />
         <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
-        <PackageReference Include="System.Threading.Channels" Version="6.0.0" />
+        <PackageReference Include="System.Threading.Channels" Version="8.0.0" />
         <PackageReference Include="System.ValueTuple" Version="4.5.0" />
     </ItemGroup>
 
     <ItemGroup>
-<!--        <Reference Include="SharpHoundCommonLib, Version=3.1.5.0, Culture=neutral, PublicKeyToken=null">-->
+<!--        <Reference Include="SharpHoundCommonLib">-->
 <!--            <HintPath>..\SharpHoundCommon\src\CommonLib\bin\Debug\net462\SharpHoundCommonLib.dll</HintPath>-->
 <!--        </Reference>-->
         <Reference Include="System.DirectoryServices" />

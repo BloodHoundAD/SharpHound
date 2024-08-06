@@ -47,7 +47,7 @@ namespace Sharphound.Client
         CancellationTokenSource CancellationTokenSource { get; set; }
 
         ILogger Logger { get; set; }
-        ILDAPUtils LDAPUtils { get; set; }
+        ILdapUtils LDAPUtils { get; set; }
 
         string OutputPrefix { get; set; }
         string OutputDirectory { get; set; }
@@ -62,7 +62,7 @@ namespace Sharphound.Client
 
         public string LocalAdminPassword { get; set; }
 
-        ResolvedCollectionMethod ResolvedCollectionMethods { get; set; }
+        CollectionMethod ResolvedCollectionMethods { get; set; }
 
         /// <summary>
         ///     Does throttle and jitter for computer requests
@@ -71,7 +71,7 @@ namespace Sharphound.Client
         Task DoDelay();
 
         string GetCachePath();
-        ResolvedCollectionMethod SetupMethodsForLoop();
+        CollectionMethod SetupMethodsForLoop();
         string ResolveFileName(string filename, string extension, bool addTimestamp);
         EnumerationDomain[] Domains { get; set; }
         void UpdateLoopTime();

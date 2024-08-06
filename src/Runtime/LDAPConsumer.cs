@@ -6,13 +6,14 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Sharphound.Client;
 using SharpHoundCommonLib;
+using SharpHoundCommonLib.Enums;
 using SharpHoundCommonLib.OutputTypes;
 
 namespace Sharphound.Runtime
 {
     public static class LDAPConsumer
     {
-        internal static async Task ConsumeSearchResults(Channel<ISearchResultEntry> inputChannel,
+        internal static async Task ConsumeSearchResults(Channel<IDirectoryObject> inputChannel,
             Channel<CSVComputerStatus> computerStatusChannel, Channel<OutputBase> outputChannel, IContext context,
             int id)
         {
@@ -24,12 +25,14 @@ namespace Sharphound.Runtime
             await foreach (var item in inputChannel.Reader.ReadAllAsync())
                 try
                 {
-                    var res = item.ResolveBloodHoundInfo();
-
-                    if (res == null)
+                    if (await LdapUtils.ResolveSearchResult(item, context.LDAPUtils) is not (true, var res) || res == null || res.ObjectType == Label.Base) {
+                        if (item.TryGetDistinguishedName(out var dn)) {
+                            log.LogTrace("Consumer failed to resolve entry for {item} or label was Base", dn);
+                        }
                         continue;
+                    }
 
-                    log.LogTrace("Consumer {ThreadID} started processing {obj}", threadId, res.DisplayName);
+                    log.LogTrace("Consumer {ThreadID} started processing {obj} ({type})", threadId, res.DisplayName, res.ObjectType);
                     watch.Start();
                     var processed = await processor.ProcessObject(item, res, computerStatusChannel);
                     watch.Stop();

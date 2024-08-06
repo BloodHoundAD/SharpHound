@@ -92,9 +92,12 @@ namespace Sharphound
 
         [Option(HelpText = "Override port for LDAP", Default = 0)]
         public int LDAPPort { get; set; }
+        
+        [Option(HelpText = "Override port for LDAPS", Default = 0)]
+        public int LDAPSSLPort { get; set; }
 
-        [Option(HelpText = "Connect to LDAP SSL instead of regular LDAP", Default = false)]
-        public bool SecureLDAP { get; set; }
+        [Option(HelpText = "Only connect to LDAP SSL, disallowing fallback", Default = false)]
+        public bool ForceSecureLDAP { get; set; }
 
         [Option(HelpText = "Disables certificate verification when using LDAPS", Default = false)]
         public bool DisableCertVerification { get; set; }
@@ -136,6 +139,9 @@ namespace Sharphound
 
         [Option(HelpText = "Collect all LDAP properties from objects")]
         public bool CollectAllProperties { get; set; }
+        
+        [Option(HelpText = "Split the main ldap query into smaller chunks to attempt to reduce server load")]
+        public bool PartitionLdapQueries { get; set; }
 
         //Loop Options
         [Option('l', "Loop", HelpText = "Loop computer collection")]
@@ -153,13 +159,13 @@ namespace Sharphound
         [Option('v', HelpText = "Enable verbose output", Default = (int)LogLevel.Information)]
         public int Verbosity { get; set; }
 
-        internal bool ResolveCollectionMethods(ILogger logger, out ResolvedCollectionMethod resolved, out bool dconly)
+        internal bool ResolveCollectionMethods(ILogger logger, out CollectionMethod resolved, out bool dconly)
         {
             var arr = CollectionMethods.Count() == 1
                 ? CollectionMethods.First().Split(',')
                 : CollectionMethods.ToArray();
 
-            resolved = ResolvedCollectionMethod.None;
+            resolved = CollectionMethod.None;
             dconly = false;
 
             foreach (var baseMethod in arr)
@@ -177,29 +183,29 @@ namespace Sharphound
 
                 resolved |= option switch
                 {
-                    CollectionMethodOptions.Group => ResolvedCollectionMethod.Group,
-                    CollectionMethodOptions.Session => ResolvedCollectionMethod.Session,
-                    CollectionMethodOptions.LoggedOn => ResolvedCollectionMethod.LoggedOn,
-                    CollectionMethodOptions.Trusts => ResolvedCollectionMethod.Trusts,
-                    CollectionMethodOptions.ACL => ResolvedCollectionMethod.ACL,
-                    CollectionMethodOptions.ObjectProps => ResolvedCollectionMethod.ObjectProps,
-                    CollectionMethodOptions.RDP => ResolvedCollectionMethod.RDP,
-                    CollectionMethodOptions.DCOM => ResolvedCollectionMethod.DCOM,
-                    CollectionMethodOptions.LocalAdmin => ResolvedCollectionMethod.LocalAdmin,
-                    CollectionMethodOptions.PSRemote => ResolvedCollectionMethod.PSRemote,
-                    CollectionMethodOptions.SPNTargets => ResolvedCollectionMethod.SPNTargets,
-                    CollectionMethodOptions.Container => ResolvedCollectionMethod.Container,
-                    CollectionMethodOptions.GPOLocalGroup => ResolvedCollectionMethod.GPOLocalGroup,
-                    CollectionMethodOptions.LocalGroup => ResolvedCollectionMethod.LocalGroups,
-                    CollectionMethodOptions.UserRights => ResolvedCollectionMethod.UserRights,
-                    CollectionMethodOptions.Default => ResolvedCollectionMethod.Default,
-                    CollectionMethodOptions.DCOnly => ResolvedCollectionMethod.DCOnly,
-                    CollectionMethodOptions.ComputerOnly => ResolvedCollectionMethod.ComputerOnly,
-                    CollectionMethodOptions.CARegistry => ResolvedCollectionMethod.CARegistry,
-                    CollectionMethodOptions.DCRegistry => ResolvedCollectionMethod.DCRegistry,
-                    CollectionMethodOptions.CertServices => ResolvedCollectionMethod.CertServices,
-                    CollectionMethodOptions.All => ResolvedCollectionMethod.All,
-                    CollectionMethodOptions.None => ResolvedCollectionMethod.None,
+                    CollectionMethodOptions.Group => CollectionMethod.Group,
+                    CollectionMethodOptions.Session => CollectionMethod.Session,
+                    CollectionMethodOptions.LoggedOn => CollectionMethod.LoggedOn,
+                    CollectionMethodOptions.Trusts => CollectionMethod.Trusts,
+                    CollectionMethodOptions.ACL => CollectionMethod.ACL,
+                    CollectionMethodOptions.ObjectProps => CollectionMethod.ObjectProps,
+                    CollectionMethodOptions.RDP => CollectionMethod.RDP,
+                    CollectionMethodOptions.DCOM => CollectionMethod.DCOM,
+                    CollectionMethodOptions.LocalAdmin => CollectionMethod.LocalAdmin,
+                    CollectionMethodOptions.PSRemote => CollectionMethod.PSRemote,
+                    CollectionMethodOptions.SPNTargets => CollectionMethod.SPNTargets,
+                    CollectionMethodOptions.Container => CollectionMethod.Container,
+                    CollectionMethodOptions.GPOLocalGroup => CollectionMethod.GPOLocalGroup,
+                    CollectionMethodOptions.LocalGroup => CollectionMethod.LocalGroups,
+                    CollectionMethodOptions.UserRights => CollectionMethod.UserRights,
+                    CollectionMethodOptions.Default => CollectionMethod.Default,
+                    CollectionMethodOptions.DCOnly => CollectionMethod.DCOnly,
+                    CollectionMethodOptions.ComputerOnly => CollectionMethod.ComputerOnly,
+                    CollectionMethodOptions.CARegistry => CollectionMethod.CARegistry,
+                    CollectionMethodOptions.DCRegistry => CollectionMethod.DCRegistry,
+                    CollectionMethodOptions.CertServices => CollectionMethod.CertServices,
+                    CollectionMethodOptions.All => CollectionMethod.All,
+                    CollectionMethodOptions.None => CollectionMethod.None,
                     _ => throw new ArgumentOutOfRangeException()
                 };
 
@@ -209,56 +215,56 @@ namespace Sharphound
             if (Stealth)
             {
                 var updates = new List<string>();
-                if ((resolved & ResolvedCollectionMethod.LoggedOn) != 0)
+                if ((resolved & CollectionMethod.LoggedOn) != 0)
                 {
-                    resolved ^= ResolvedCollectionMethod.LoggedOn;
+                    resolved ^= CollectionMethod.LoggedOn;
                     updates.Add("[-] Removed LoggedOn");
                 }
 
                 var localGroupRemoved = false;
-                if ((resolved & ResolvedCollectionMethod.RDP) != 0)
+                if ((resolved & CollectionMethod.RDP) != 0)
                 {
                     localGroupRemoved = true;
-                    resolved ^= ResolvedCollectionMethod.RDP;
+                    resolved ^= CollectionMethod.RDP;
                     updates.Add("[-] Removed RDP Collection");
                 }
 
-                if ((resolved & ResolvedCollectionMethod.DCOM) != 0)
+                if ((resolved & CollectionMethod.DCOM) != 0)
                 {
                     localGroupRemoved = true;
-                    resolved ^= ResolvedCollectionMethod.DCOM;
+                    resolved ^= CollectionMethod.DCOM;
                     updates.Add("[-] Removed DCOM Collection");
                 }
 
-                if ((resolved & ResolvedCollectionMethod.PSRemote) != 0)
+                if ((resolved & CollectionMethod.PSRemote) != 0)
                 {
                     localGroupRemoved = true;
-                    resolved ^= ResolvedCollectionMethod.PSRemote;
+                    resolved ^= CollectionMethod.PSRemote;
                     updates.Add("[-] Removed PSRemote Collection");
                 }
 
-                if ((resolved & ResolvedCollectionMethod.LocalAdmin) != 0)
+                if ((resolved & CollectionMethod.LocalAdmin) != 0)
                 {
                     localGroupRemoved = true;
-                    resolved ^= ResolvedCollectionMethod.LocalAdmin;
+                    resolved ^= CollectionMethod.LocalAdmin;
                     updates.Add("[-] Removed LocalAdmin Collection");
                 }
 
-                if ((resolved & ResolvedCollectionMethod.CARegistry) != 0)
+                if ((resolved & CollectionMethod.CARegistry) != 0)
                 {
-                    resolved ^= ResolvedCollectionMethod.CARegistry;
+                    resolved ^= CollectionMethod.CARegistry;
                     updates.Add("[-] Removed CARegistry Collection");
                 }
 
-                if ((resolved & ResolvedCollectionMethod.DCRegistry) != 0)
+                if ((resolved & CollectionMethod.DCRegistry) != 0)
                 {
-                    resolved ^= ResolvedCollectionMethod.DCRegistry;
+                    resolved ^= CollectionMethod.DCRegistry;
                     updates.Add("[-] Removed DCRegistry Collection");
                 }
 
                 if (localGroupRemoved)
                 {
-                    resolved |= ResolvedCollectionMethod.GPOLocalGroup;
+                    resolved |= CollectionMethod.GPOLocalGroup;
                     updates.Add("[+] Added GPOLocalGroup");
                 }
 

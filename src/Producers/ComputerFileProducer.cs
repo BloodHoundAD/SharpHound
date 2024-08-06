@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Sharphound.Client;
 using SharpHoundCommonLib;
+using SharpHoundCommonLib.LDAPQueries;
 using SharpHoundCommonLib.OutputTypes;
 
 namespace Sharphound.Producers
@@ -16,7 +17,7 @@ namespace Sharphound.Producers
     /// </summary>
     internal class ComputerFileProducer : BaseProducer
     {
-        public ComputerFileProducer(IContext context, Channel<ISearchResultEntry> channel, Channel<OutputBase> outputChannel) : base(context, channel, outputChannel)
+        public ComputerFileProducer(IContext context, Channel<IDirectoryObject> channel, Channel<OutputBase> outputChannel) : base(context, channel, outputChannel)
         {
         }
 
@@ -32,6 +33,24 @@ namespace Sharphound.Producers
 
             var ldapData = CreateDefaultNCData();
 
+            
+            if (Context.Flags.CollectAllProperties)
+            {
+                Context.Logger.LogDebug("CollectAllProperties set. Changing LDAP properties to *");
+                ldapData.Attributes = new[] { "*" };
+            }
+            
+            string domainName;
+            if (Context.DomainName == null) {
+                if (!Context.LDAPUtils.GetDomain(out var domainObj)) {
+                    Context.Logger.LogError("No domain name specified for computer file producer and unable to resolve a domain name");
+                    return;
+                }
+                domainName = domainObj?.Name;
+            } else {
+                domainName = Context.DomainName;
+            }
+
             try
             {
                 //Open the file for reading
@@ -44,9 +63,15 @@ namespace Sharphound.Producers
                     if (cancellationToken.IsCancellationRequested) break;
 
                     string sid;
-                    if (!computer.StartsWith("S-1-5-21"))
+                    if (!computer.StartsWith("S-1-5-21")) {
                         //The computer isn't a SID so try to convert it to one
-                        sid = await Context.LDAPUtils.ResolveHostToSid(computer, Context.DomainName);
+                        if (await Context.LDAPUtils.ResolveHostToSid(computer, domainName) is (true, var tempSid)) {
+                            sid = tempSid;
+                        } else {
+                            Context.Logger.LogError("Failed to resolve host {Computer} to SID", computer);
+                            continue;
+                        }
+                    }
                     else
                         //The computer is already a sid, so just store it off
                         sid = computer;
@@ -54,11 +79,13 @@ namespace Sharphound.Producers
                     try
                     {
                         //Convert the sid to a hex representation and find the entry in the domain
-                        var hexSid = Helpers.ConvertSidToHexSid(sid);
-                        var entry = Context.LDAPUtils.QueryLDAP($"(objectsid={hexSid})", SearchScope.Subtree,
-                            ldapData.Props.ToArray(), cancellationToken, Context.DomainName,
-                            adsPath: Context.SearchBase).DefaultIfEmpty(null).FirstOrDefault();
-                        if (entry == null)
+                        var entry = await Context.LDAPUtils.Query(new LdapQueryParameters() {
+                                LDAPFilter = CommonFilters.SpecificSID(sid),
+                                Attributes = ldapData.Attributes,
+                                DomainName = domainName,
+                                SearchBase = Context.SearchBase
+                            }, cancellationToken).FirstOrDefaultAsync(LdapResult<IDirectoryObject>.Fail());
+                        if (!entry.IsSuccess)
                         {
                             //We couldn't find the entry for whatever reason
                             Context.Logger.LogWarning("Failed to resolve {computer}", computer);
@@ -66,7 +93,7 @@ namespace Sharphound.Producers
                         }
 
                         //Success! Send the computer to be processed
-                        await Channel.Writer.WriteAsync(entry, cancellationToken);
+                        await Channel.Writer.WriteAsync(entry.Value, cancellationToken);
                     }
                     catch (Exception e)
                     {

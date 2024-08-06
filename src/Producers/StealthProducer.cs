@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.DirectoryServices.Protocols;
@@ -7,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Sharphound.Client;
 using SharpHoundCommonLib;
+using SharpHoundCommonLib.Enums;
 using SharpHoundCommonLib.LDAPQueries;
 using SharpHoundCommonLib.OutputTypes;
 
@@ -18,20 +20,20 @@ namespace Sharphound.Producers
     internal class StealthProducer : BaseProducer
     {
         private static bool _stealthTargetsBuilt;
-        private readonly IEnumerable<string> _props;
-        private readonly IEnumerable<string> _propsConfigNC;
-        private readonly LDAPFilter _query;
-        private readonly LDAPFilter _queryConfigNC;
+        private readonly string[] _props;
+        private readonly string[] _propsConfigNC;
+        private readonly LdapFilter _query;
+        private readonly LdapFilter _queryConfigNC;
 
-        public StealthProducer(IContext context, Channel<ISearchResultEntry> channel, Channel<OutputBase> outputChannel) : base(context, channel, outputChannel)
+        public StealthProducer(IContext context, Channel<IDirectoryObject> channel, Channel<OutputBase> outputChannel) : base(context, channel, outputChannel)
         {
             var ldapData = CreateDefaultNCData();
             _query = ldapData.Filter;
-            _props = ldapData.Props;
+            _props = ldapData.Attributes;
 
             var configNCData = CreateConfigNCData();
             _queryConfigNC = configNCData.Filter;
-            _propsConfigNC = configNCData.Props;
+            _propsConfigNC = configNCData.Attributes;
         }
 
         /// <summary>
@@ -47,26 +49,42 @@ namespace Sharphound.Producers
 
             //OutputTasks.StartOutputTimer(context);
             //Output our stealth targets to the queue
-            foreach (var searchResult in Context.LDAPUtils.QueryLDAP(_query.GetFilter(), SearchScope.Subtree,
-                         _props.ToArray(), cancellationToken,
-                         Context.DomainName, adsPath: Context.SearchBase))
-                await Channel.Writer.WriteAsync(searchResult, cancellationToken);
+            await foreach (var result in Context.LDAPUtils.PagedQuery(new LdapQueryParameters() {
+                         LDAPFilter = _query.GetFilter(),
+                         Attributes = _props,
+                         SearchBase = Context.SearchBase,
+                         DomainName = Context.DomainName
+                     }, cancellationToken)) {
+                if (!result.IsSuccess) {
+                    Context.Logger.LogError("Error in stealth producer: {Message} ({Code})", result.Error, result.ErrorCode);
+                    break;
+                }
+                await Channel.Writer.WriteAsync(result.Value, cancellationToken);
+            }
         }
 
         public override async Task ProduceConfigNC()
         {
+            if (string.IsNullOrEmpty(_queryConfigNC.GetFilter()))
+                return;
             var cancellationToken = Context.CancellationTokenSource.Token;
             //If we haven't generated our stealth targets, we'll build it now
             if (!_stealthTargetsBuilt)
                 BuildStealthTargets();
-
-            var configAdsPath = Context.LDAPUtils.GetConfigurationPath(Context.DomainName);
-
+            
             //Output our stealth targets to the queue
-            foreach (var searchResult in Context.LDAPUtils.QueryLDAP(_queryConfigNC.GetFilter(), SearchScope.Subtree,
-                         _propsConfigNC.ToArray(), cancellationToken,
-                         Context.DomainName, adsPath: configAdsPath))
-                await Channel.Writer.WriteAsync(searchResult, cancellationToken);
+            await foreach (var result in Context.LDAPUtils.PagedQuery(new LdapQueryParameters() {
+                               LDAPFilter = _query.GetFilter(),
+                               Attributes = _props,
+                               DomainName = Context.DomainName,
+                               NamingContext = NamingContext.Configuration
+                           }, cancellationToken)) {
+                if (!result.IsSuccess) {
+                    Context.Logger.LogError("Error in stealth producer: {Message} ({Code})", result.Error, result.ErrorCode);
+                    break;
+                }
+                await Channel.Writer.WriteAsync(result.Value, cancellationToken);
+            }
 
         }
 
@@ -75,68 +93,86 @@ namespace Sharphound.Producers
             Context.Logger.LogInformation("Finding Stealth Targets from LDAP Properties");
 
             var targets = await FindPathTargetSids();
-            if (!Context.Flags.ExcludeDomainControllers) targets.Merge(FindDomainControllers());
+            if (!Context.Flags.ExcludeDomainControllers) targets.Merge(await FindDomainControllers());
 
             StealthContext.AddStealthTargetSids(targets);
             _stealthTargetsBuilt = true;
         }
 
-        private Dictionary<string, ISearchResultEntry> FindDomainControllers()
-        {
-            return Context.LDAPUtils.QueryLDAP(CommonFilters.DomainControllers,
-                    SearchScope.Subtree, _props.ToArray(), Context.DomainName).Where(x => x.GetSid() != null)
-                .ToDictionary(x => x.GetSid());
+        private async Task<Dictionary<string, IDirectoryObject>> FindDomainControllers() {
+            var res = new Dictionary<string, IDirectoryObject>();
+            await foreach (var result in Context.LDAPUtils.PagedQuery(new LdapQueryParameters() {
+                               LDAPFilter = CommonFilters.DomainControllers,
+                               Attributes = _props,
+                               DomainName = Context.DomainName
+                           })) {
+                if (!result.IsSuccess) {
+                    break;
+                }
+
+                if (!result.Value.TryGetSecurityIdentifier(out var sid)) {
+                    continue;
+                }
+                
+                res.Add(sid, result.Value);
+            }
+
+            return res;
         }
 
         /// <summary>
         ///     Finds stealth targets using ldap properties.
         /// </summary>
         /// <returns></returns>
-        private async Task<Dictionary<string, ISearchResultEntry>> FindPathTargetSids()
+        private async Task<Dictionary<string, IDirectoryObject>> FindPathTargetSids()
         {
             var paths = new ConcurrentDictionary<string, byte>();
-            var sids = new Dictionary<string, ISearchResultEntry>();
-
-            var query = new LDAPFilter();
+            var sids = new Dictionary<string, IDirectoryObject>();
+            
+            //Request user objects with the "homedirectory", "scriptpath", or "profilepath" attributes
+            var query = new LdapFilter();
             query.AddComputers("(|(homedirectory=*)(scriptpath=*)(profilepath=*))");
             foreach (var domain in Context.Domains)
             {
-                //Request user objects with the "homedirectory", "scriptpath", or "profilepath" attributes
-                Parallel.ForEach(Context.LDAPUtils.QueryLDAP(
-                    query.GetFilter(),
-                    SearchScope.Subtree,
-                    new[] { "homedirectory", "scriptpath", "profilepath" }, domain.Name), searchResult =>
-                {
-                    //Grab any properties that exist, filter out null values
-                    var poss = new[]
-                    {
-                        searchResult.GetProperty("homedirectory"), searchResult.GetProperty("scriptpath"),
-                        searchResult.GetProperty("profilepath")
-                    }.Where(s => s != null);
-
-                    // Loop over each possibility, and grab the hostname from the path, adding it to a list
-                    foreach (var s in poss)
-                    {
-                        var split = s.Split('\\');
-                        if (!(split.Length >= 3)) continue;
-                        var path = split[2];
-                        paths.TryAdd(path, new byte());
+                await foreach (var searchResult in Context.LDAPUtils.PagedQuery(new LdapQueryParameters() {
+                                   LDAPFilter = query.GetFilter(),
+                                   Attributes = CommonProperties.StealthProperties,
+                                   DomainName = domain.Name
+                               })) {
+                    if (searchResult.IsSuccess) {
+                        var poss = new[]
+                        {
+                            searchResult.Value.GetProperty("homedirectory"), searchResult.Value.GetProperty("scriptpath"),
+                            searchResult.Value.GetProperty("profilepath")
+                        }.Where(s => s != null);
+                        
+                        foreach (var s in poss)
+                        {
+                            var split = s.Split('\\');
+                            if (!(split.Length >= 3)) continue;
+                            var path = split[2];
+                            paths.TryAdd(path, new byte());
+                        }
                     }
-                });
+                }
             }
-
-
-
+            
             // Loop over the paths we grabbed, and resolve them to sids.
             foreach (var path in paths.Keys)
             {
-                var sid = await Context.LDAPUtils.ResolveHostToSid(path, Context.DomainName);
+                if (await Context.LDAPUtils.ResolveHostToSid(path, Context.DomainName) is (true, var sid)) {
+                    if (sid != null && sid.StartsWith("S-1-5")) {
+                        var searchResult = await Context.LDAPUtils.Query(new LdapQueryParameters() {
+                            LDAPFilter = CommonFilters.SpecificSID(sid),
+                            SearchScope = SearchScope.Subtree,
+                            Attributes = _props,
+                            DomainName = Context.DomainName
+                        }).FirstOrDefaultAsync(LdapResult<IDirectoryObject>.Fail());
 
-                if (sid != null && sid.StartsWith("S-1-5"))
-                {
-                    var searchResult = Context.LDAPUtils.QueryLDAP(CommonFilters.SpecificSID(sid),
-                        SearchScope.Subtree, _props.ToArray());
-                    sids.Add(sid, searchResult.FirstOrDefault());
+                        if (searchResult.IsSuccess) {
+                            sids.Add(sid, searchResult.Value);    
+                        }
+                    }
                 }
             }
 

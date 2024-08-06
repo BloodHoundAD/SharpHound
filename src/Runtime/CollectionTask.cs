@@ -15,7 +15,7 @@ namespace Sharphound.Runtime
         private readonly Channel<CSVComputerStatus> _compStatusChannel;
         private readonly CompStatusWriter _compStatusWriter;
         private readonly IContext _context;
-        private readonly Channel<ISearchResultEntry> _ldapChannel;
+        private readonly Channel<IDirectoryObject> _ldapChannel;
         private readonly ILogger _log;
         private readonly Channel<OutputBase> _outputChannel;
 
@@ -28,7 +28,7 @@ namespace Sharphound.Runtime
         {
             _context = context;
             _log = context.Logger;
-            _ldapChannel = Channel.CreateBounded<ISearchResultEntry>(new BoundedChannelOptions(1000)
+            _ldapChannel = Channel.CreateBounded<IDirectoryObject>(new BoundedChannelOptions(1000)
             {
                 SingleWriter = true,
                 SingleReader = false,
@@ -82,7 +82,7 @@ namespace Sharphound.Runtime
             await Task.WhenAll(_taskPool);
             _log.LogInformation("Consumers finished, closing output channel");
 
-            foreach (var wkp in _context.LDAPUtils.GetWellKnownPrincipalOutput(_context.DomainName))
+            await foreach (var wkp in _context.LDAPUtils.GetWellKnownPrincipalOutput())
             {
                 if (!wkp.ObjectIdentifier.EndsWith(EnterpriseDCSuffix))
                 {
