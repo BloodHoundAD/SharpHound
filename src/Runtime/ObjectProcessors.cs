@@ -114,6 +114,8 @@ namespace Sharphound.Runtime {
 
             return props;
         }
+        
+        
 
         private async Task<User> ProcessUserObject(IDirectoryObject entry,
             ResolvedSearchResult resolvedSearchResult) {
@@ -315,7 +317,7 @@ namespace Sharphound.Runtime {
             ret.Properties.Add("samaccountname", entry.GetProperty(LDAPProperties.SAMAccountName));
 
             if ((_methods & CollectionMethod.ACL) != 0) {
-                ret.Aces = await _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArrayAsync();
+                ret.Aces = await _aclProcessor.ProcessACL(resolvedSearchResult, entry).ToArrayAsync(cancellationToken: _cancellationToken);
                 ret.IsACLProtected = _aclProcessor.IsACLProtected(entry);
                 ret.Properties.Add("isaclprotected", ret.IsACLProtected);
             }
@@ -323,7 +325,7 @@ namespace Sharphound.Runtime {
             if ((_methods & CollectionMethod.Group) != 0)
                 ret.Members = await _groupProcessor
                     .ReadGroupMembers(resolvedSearchResult, entry)
-                    .ToArrayAsync();
+                    .ToArrayAsync(cancellationToken: _cancellationToken);
 
             if ((_methods & CollectionMethod.ObjectProps) != 0) {
                 var groupProps = LdapPropertyProcessor.ReadGroupProperties(entry);

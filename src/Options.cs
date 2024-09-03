@@ -109,7 +109,7 @@ namespace Sharphound
         [Option(HelpText = "Skip checking if 445 is open", Default = false)]
         public bool SkipPortCheck { get; set; }
 
-        [Option(HelpText = "Timeout for port checks in milliseconds", Default = 500)]
+        [Option(HelpText = "Timeout for port checks in milliseconds", Default = 10000)]
         public int PortCheckTimeout { get; set; }
 
         [Option(HelpText = "Skip check for PwdLastSet when enumerating computers", Default = false)]
