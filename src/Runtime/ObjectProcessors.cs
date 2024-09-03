@@ -368,7 +368,7 @@ namespace Sharphound.Runtime {
                     .ToArrayAsync();
 
             if ((_methods & CollectionMethod.ObjectProps) != 0) {
-                ret.Properties = ContextUtils.Merge(ret.Properties, LdapPropertyProcessor.ReadDomainProperties(entry));
+                ret.Properties = ContextUtils.Merge(ret.Properties, await _ldapPropertyProcessor.ReadDomainProperties(entry, resolvedSearchResult.Domain));
                 if (_context.Flags.CollectAllProperties) {
                     ret.Properties = ContextUtils.Merge(_ldapPropertyProcessor.ParseAllProperties(entry),
                         ret.Properties);
