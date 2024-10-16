@@ -127,6 +127,7 @@ namespace Sharphound.Runtime {
             ret.Properties.Add("samaccountname", entry.GetProperty(LDAPProperties.SAMAccountName));
             if (entry.IsMSA()) ret.Properties.Add("msa", true);
             if (entry.IsGMSA()) ret.Properties.Add("gmsa", true);
+            ret.DomainSID = resolvedSearchResult.DomainSid;
 
             if ((_methods & CollectionMethod.ACL) != 0) {
                 var aces = await _aclProcessor.ProcessACL(resolvedSearchResult, entry)
@@ -153,6 +154,7 @@ namespace Sharphound.Runtime {
 
                 ret.HasSIDHistory = userProps.SidHistory;
                 ret.AllowedToDelegate = userProps.AllowedToDelegate;
+                ret.UnconstrainedDelegation = userProps.UnconstrainedDelegation;
             }
 
             if ((_methods & CollectionMethod.SPNTargets) != 0) {
@@ -207,6 +209,7 @@ namespace Sharphound.Runtime {
                 ret.AllowedToAct = computerProps.AllowedToAct;
                 ret.HasSIDHistory = computerProps.SidHistory;
                 ret.DumpSMSAPassword = computerProps.DumpSMSAPassword;
+                ret.UnconstrainedDelegation = computerProps.UnconstrainedDelegation;
             }
 
             if ((_methods & CollectionMethod.Container) != 0) {
