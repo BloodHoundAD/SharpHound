@@ -15,7 +15,7 @@
     </PropertyGroup>
     
     <PropertyGroup>
-        <CommonLibsVersion>4.8.0-rc2</CommonLibsVersion>
+        <CommonLibsVersion>4.8.0</CommonLibsVersion>
         <CommonSource>Dev</CommonSource>
         <_CommonSource>$(CommonSource.ToLower())</_CommonSource>
         <_CommonLibPath>..\SharpHoundCommon\src\CommonLib\bin\$(Configuration)\net472\SharpHoundCommonLib.dll</_CommonLibPath>
