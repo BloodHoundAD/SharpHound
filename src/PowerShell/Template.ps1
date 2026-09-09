@@ -27,6 +27,7 @@
             Container - Collect GPO/OU Data
             ComputerOnly - Collect Local Group, Session data, User Rights, CA Registry, and DC Registry
             GPOLocalGroup - Collect Local Group information using GPO (Group Policy Objects)
+            GPOUserRights - Collect Local User Rights information using GPO (Group Policy Objects)
             LoggedOn - Collect session information using privileged methods (needs admin!)
             ObjectProps - Collect node property information for users and computers
             SPNTargets - Collect SPN targets (currently only MSSQL)

@@ -19,6 +19,7 @@
         SPNTargets,
         Container,
         GPOLocalGroup,
+        GPOUserRights,
         LocalGroup,
         UserRights,
         Default,

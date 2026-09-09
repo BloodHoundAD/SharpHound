@@ -34,6 +34,7 @@ namespace Sharphound.Runtime {
         private readonly GroupProcessor _groupProcessor;
         private readonly LdapPropertyProcessor _ldapPropertyProcessor;
         private readonly GPOLocalGroupProcessor _gpoLocalGroupProcessor;
+        private readonly GPOUserRightsAssignmentProcessor _gpoUserRightsAssignmentProcessor;
         private readonly UserRightsAssignmentProcessor _userRightsAssignmentProcessor;
         private readonly LocalGroupProcessor _localGroupProcessor;
         private readonly ILogger _log;
@@ -60,6 +61,7 @@ namespace Sharphound.Runtime {
             _groupProcessor = new GroupProcessor(context.LDAPUtils);
             _containerProcessor = new ContainerProcessor(context.LDAPUtils);
             _gpoLocalGroupProcessor = new GPOLocalGroupProcessor(context.LDAPUtils);
+            _gpoUserRightsAssignmentProcessor = new GPOUserRightsAssignmentProcessor(context.LDAPUtils);
             _userRightsAssignmentProcessor = new UserRightsAssignmentProcessor(context.LDAPUtils);
             _localGroupProcessor = new LocalGroupProcessor(context.LDAPUtils);
             _webClientProcessor = new WebClientServiceProcessor(log);
@@ -393,6 +395,7 @@ namespace Sharphound.Runtime {
 
             if (_methods.HasFlag(CollectionMethod.SmbInfo)) {
                 ret.SmbInfo = await _smbProcessor.Scan(apiName, resolvedSearchResult.DomainSid);
+                //ret.SmbInfo = await _smbProcessor.Scan(apiName);
             }
 
             // Re-introduce this when we're ready for Event Log collection
@@ -458,6 +461,16 @@ namespace Sharphound.Runtime {
                 if (ldapServices.IsSigningRequired.Collected) {
                     ret.Properties.Add("ldapsigning", ldapServices.IsSigningRequired.Result);
                 }
+                //var ldapServices = await dcLdapProcessor.Scan(resolvedSearchResult.DisplayName);
+                //ret.Properties.Add("ldapavailable", ldapServices.HasLdap);
+                //ret.Properties.Add("ldapsavailable", ldapServices.HasLdaps);
+                //if (ldapServices.IsChannelBindingDisabled.Collected) {
+                //    ret.Properties.Add("ldapsepa", !ldapServices.IsChannelBindingDisabled.Result);    
+                //}
+
+                //if (ldapServices.IsSigningRequired.Collected) {
+                //    ret.Properties.Add("ldapsigning", ldapServices.IsSigningRequired.Result);    
+                //}
             }
         }
 
@@ -632,6 +645,9 @@ namespace Sharphound.Runtime {
                 ret.GPOChanges = await _gpoLocalGroupProcessor.ReadGPOLocalGroups(entry);
             }
 
+            if (_methods.HasFlag(CollectionMethod.GPOUserRights)) {
+                ret.GPOUserRights = await _gpoUserRightsAssignmentProcessor.ReadGPOUserRights(entry);
+            }
 
             return ret;
         }
