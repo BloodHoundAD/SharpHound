@@ -93,6 +93,12 @@ The listing below details the CLI arguments SharpHound supports. Additional deta
 
   --ldappassword             Password for LDAP
 
+  --ldapenvusername          Username for LDAP stored in a defined environment variable (argument takes the environment variable as input)
+
+  --ldapenvpassword          Password for LDAP stored in a defined environment variable (argument takes the environment variable as input)
+
+  --ldapcredentialsjsonpath  Path argument for a json file containing {"Username": "xxxx", "Password": "xxxx"} to be used instead of --ldapusername and --ldappassword
+
   --domaincontroller         Override domain controller to pull LDAP from. This option can result in data loss
 
   --ldapport                 (Default: 0) Override port for LDAP

@@ -78,6 +78,15 @@ namespace Sharphound
         [Option(HelpText = "Password for LDAP", Default = null)]
         public string LDAPPassword { get; set; }
 
+        [Option(HelpText = "Path to Json file containing username/password", Default = null)]
+        public string LDAPCredentialJsonPath { get; set; }
+
+        [Option(HelpText = "Enviroment variable name for LDAP Username", Default = null)]
+        public string LDAPEnvUsername { get; set; }
+
+        [Option(HelpText = "Enviroment variable name for LDAP Password", Default = null)]
+        public string LDAPEnvPassword { get; set; }
+
         [Option(HelpText = "Do the session enumeration with local admin credentials instead of domain credentials", Default = false)]
         public bool DoLocalAdminSessionEnum { get; set; }
 

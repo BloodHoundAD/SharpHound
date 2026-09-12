@@ -109,10 +109,28 @@ namespace Sharphound
 
                     if (options.DomainController != null) ldapOptions.Server = options.DomainController;
 
-                    if (options.LDAPUsername != null)
-                    {
-                        if (options.LDAPPassword == null)
-                        {
+                    if (options.LDAPCredentialJsonPath != null) {
+                        string json = File.ReadAllText(options.LDAPCredentialJsonPath);
+                        Credentials ldapCreds = JsonConvert.DeserializeObject<Credentials>(json);
+                        ldapOptions.Username = ldapCreds.Username;
+                        ldapOptions.Password = ldapCreds.Password;
+                    }
+                    
+                    if (options.LDAPEnvUsername != null) {
+                        if (options.LDAPEnvPassword == null) {
+                            logger.LogError("You must specify LDAPEnvPassword if using the LDAPEnvUsername options");
+                            return;
+                        }
+
+                        string EnvUsername = Environment.GetEnvironmentVariable(options.LDAPEnvUsername);
+                        string EnvPassword = Environment.GetEnvironmentVariable(options.LDAPEnvPassword);
+
+                        ldapOptions.Username = EnvUsername;
+                        ldapOptions.Password = EnvPassword;
+                    }
+
+                    if (options.LDAPUsername != null) {
+                        if (options.LDAPPassword == null) {
                             logger.LogError("You must specify LDAPPassword if using the LDAPUsername options");
                             return;
                         }
