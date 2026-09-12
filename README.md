@@ -126,6 +126,8 @@ The listing below details the CLI arguments SharpHound supports. Additional deta
 
   --collectallproperties     Collect all LDAP properties from objects
 
+  --skipdenyacescount        Skip collecting custom deny ACE counts in LDAP object properties
+
   -l, --Loop                 Loop computer collection
 
   --loopduration             Loop duration (hh:mm:ss - 05:00:00 is 5 hours, default: 2 hrs)

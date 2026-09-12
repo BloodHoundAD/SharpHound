@@ -184,6 +184,10 @@
     .PARAMETER CollectAllProperties
 
         Collect all string LDAP properties on objects
+
+    .PARAMETER SkipDenyAcesCount
+
+        Skip collecting custom deny ACE counts in LDAP object properties
         
     .PARAMETER Loop
     
@@ -359,6 +363,9 @@
 
         [Switch]
         $CollectAllProperties,
+
+        [Switch]
+        $SkipDenyAcesCount,
 
         [Switch]
         $Loop,

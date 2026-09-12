@@ -139,6 +139,9 @@ namespace Sharphound
 
         [Option(HelpText = "Collect all LDAP properties from objects")]
         public bool CollectAllProperties { get; set; }
+
+        [Option(HelpText = "Skip collecting custom deny ACE counts in LDAP object properties")]
+        public bool SkipDenyAcesCount { get; set; }
         
         [Option(HelpText = "Split the main ldap query into smaller chunks to attempt to reduce server load")]
         public bool PartitionLdapQueries { get; set; }

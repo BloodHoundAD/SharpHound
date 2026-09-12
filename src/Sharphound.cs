@@ -88,6 +88,7 @@ namespace Sharphound
                         RandomizeFilenames = options.RandomFileNames,
                         MemCache = options.MemCache,
                         CollectAllProperties = options.CollectAllProperties,
+                        SkipDenyAcesCount = options.SkipDenyAcesCount,
                         DCOnly = dconly,
                         PrettyPrint = options.PrettyPrint,
                         SearchForest = options.SearchForest,

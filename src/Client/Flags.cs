@@ -22,6 +22,7 @@ namespace Sharphound.Client
         public bool NoRegistryLoggedOn { get; set; }
         public bool DumpComputerStatus { get; set; }
         public bool CollectAllProperties { get; set; }
+        public bool SkipDenyAcesCount { get; set; }
         public bool DCOnly { get; set; }
         public bool PrettyPrint { get; set; }
         public bool SearchForest { get; set; }
