@@ -1081,18 +1081,30 @@ namespace Sharphound.Runtime {
                 ret.Properties.Add("isaclprotected", ret.IsACLProtected);
             }
             
-            if (_methods.HasFlag(CollectionMethod.ObjectProps) || _methods.HasFlag(CollectionMethod.Container) || _methods.HasFlag(CollectionMethod.Site))
+            var collectSiteProperties = _methods.HasFlag(CollectionMethod.ObjectProps) ||
+                                        _methods.HasFlag(CollectionMethod.Site);
+            var collectSiteContainment = _methods.HasFlag(CollectionMethod.Container) ||
+                                         _methods.HasFlag(CollectionMethod.Site);
+            Dictionary<string, object> siteProperties = null;
+
+            if (collectSiteProperties || collectSiteContainment)
             {
-                ret.Properties =
-                    ContextUtils.Merge(LdapPropertyProcessor.ReadSiteSubnetProperties(entry), ret.Properties);
+                siteProperties = LdapPropertyProcessor.ReadSiteSubnetProperties(entry);
+            }
+
+            if (collectSiteProperties)
+            {
+                ret.Properties = ContextUtils.Merge(siteProperties, ret.Properties);
                 if (_context.Flags.CollectAllProperties)
                 {
                     ret.Properties = ContextUtils.Merge(_ldapPropertyProcessor.ParseAllProperties(entry),
                         ret.Properties);
                 }
+            }
 
-                // Can only deduce containing site for a subnet if we read the object properties, including siteObject
-                if (await _siteProcessor.GetContainingSiteForSubnet(ret.Properties) is (true, var container))
+            if (collectSiteContainment)
+            {
+                if (await _siteProcessor.GetContainingSiteForSubnet(siteProperties) is (true, var container))
                 {
                     ret.ContainedBy = container;
                 }
