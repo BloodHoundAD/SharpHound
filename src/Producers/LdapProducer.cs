@@ -181,6 +181,9 @@ namespace Sharphound.Producers
         {
             var cancellationToken = Context.CancellationTokenSource.Token;
             var configNcData = CreateConfigNCData();
+            var includeSecurityDescriptor = Array.Exists(configNcData.Attributes,
+                attribute => string.Equals(attribute, LDAPProperties.SecurityDescriptor,
+                    StringComparison.OrdinalIgnoreCase));
             var configurationNCsCollected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             if (string.IsNullOrEmpty(configNcData.Filter.GetFilter()))
@@ -201,7 +204,7 @@ namespace Sharphound.Producers
                                            Attributes = configNcData.Attributes,
                                            DomainName = domain.Name,
                                            SearchBase = path,
-                                           IncludeSecurityDescriptor = Context.ResolvedCollectionMethods.HasFlag(CollectionMethod.ACL)
+                                           IncludeSecurityDescriptor = includeSecurityDescriptor
                                        }, cancellationToken)){
                             if (!result.IsSuccess) {
                                 Context.Logger.LogError("Error during main ldap query:{Message} ({Code})", result.Error, result.ErrorCode);
@@ -222,7 +225,7 @@ namespace Sharphound.Producers
                                            LDAPFilter = filter,
                                            Attributes = configNcData.Attributes,
                                            DomainName = domain.Name,
-                                           IncludeSecurityDescriptor = Context.ResolvedCollectionMethods.HasFlag(CollectionMethod.ACL),
+                                           IncludeSecurityDescriptor = includeSecurityDescriptor,
                                            NamingContext = NamingContext.Configuration
                                        }, cancellationToken)){
                             if (!result.IsSuccess) {
