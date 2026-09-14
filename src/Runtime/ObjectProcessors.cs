@@ -377,14 +377,16 @@ namespace Sharphound.Runtime {
 
             if (_methods.HasFlag(CollectionMethod.NTLMRegistry)) {
                 await _context.DoDelay();
-                var processor = _registryProcessorMap.GetOrAdd(
-                    resolvedSearchResult.DomainSid,
-                    _ => new Lazy<RegistryProcessor>(() => {
-                        var newProcessor = new RegistryProcessor(null, new StrategyExecutor(), resolvedSearchResult.Domain);
-                        newProcessor.ComputerStatusEvent += HandleCompStatusEvent;
-                        return newProcessor;
-                    })).Value;
+                var processor = GetRegistryProcessor(resolvedSearchResult);
                 ret.NTLMRegistryData = await processor.ReadRegistrySettings(resolvedSearchResult.DisplayName);
+            }
+
+            if (_methods.HasFlag(CollectionMethod.AzureVM)) {
+                await _context.DoDelay();
+                var processor = GetRegistryProcessor(resolvedSearchResult);
+                var vmId = await processor.ReadAzureVmId(apiName);
+                if (vmId.Collected)
+                    ret.Properties["azvmid"] = vmId.Result;
             }
 
             if (_methods.HasFlag(CollectionMethod.WebClientService)) {
@@ -427,6 +429,16 @@ namespace Sharphound.Runtime {
             ret.LocalGroups = await localGroups.ToArrayAsync();
 
             return ret;
+        }
+
+        private RegistryProcessor GetRegistryProcessor(ResolvedSearchResult resolvedSearchResult) {
+            return _registryProcessorMap.GetOrAdd(
+                resolvedSearchResult.DomainSid,
+                _ => new Lazy<RegistryProcessor>(() => {
+                    var processor = new RegistryProcessor(null, new StrategyExecutor(), resolvedSearchResult.Domain);
+                    processor.ComputerStatusEvent += HandleCompStatusEvent;
+                    return processor;
+                })).Value;
         }
 
         private async void ProcessDomainController(ResolvedSearchResult resolvedSearchResult, Computer ret,
