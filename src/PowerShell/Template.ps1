@@ -35,6 +35,7 @@
             UserRights - Collect User Rights Assignment from domain computers (needs admin)
             CARegistry - Collect ADCS properties from registry of Certificate Authority servers
             DCRegistry - Collect properties from registry of Domain Controller servers
+            AzureVM - Read the Azure guest VmId and add it to each Computer object's properties
             CertServices - Collect ADCS objects from Certificate Services
             All - Collect all data
 
