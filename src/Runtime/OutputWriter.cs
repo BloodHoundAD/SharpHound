@@ -224,6 +224,7 @@ namespace Sharphound.Runtime
             {
                 var fi = new FileInfo(entry);
                 var zipEntry = new ZipEntry(fi.Name) { DateTime = fi.LastWriteTime, Size = fi.Length };
+                if (_context.ZipPassword != null) zipEntry.AESKeySize = 256;
                 zipStream.PutNextEntry(zipEntry);
                 
                 using (var fileStream = File.OpenRead(entry))
